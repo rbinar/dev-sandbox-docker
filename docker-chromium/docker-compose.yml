@@ -1,0 +1,18 @@
+services:
+  chromium:
+    image: lscr.io/linuxserver/chromium:5f5dd27e-ls102
+    container_name: chromium
+    restart: unless-stopped
+    ports:
+      - "3000:3000"   # noVNC (HTTP)
+      - "3001:3001"   # noVNC (HTTPS)
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Istanbul
+    volumes:
+      - chromium_config:/config
+    shm_size: "2g"
+
+volumes:
+  chromium_config:
