@@ -117,9 +117,9 @@ setup_code_server() {
 # Temizlik menüsü
 cleanup_menu() {
     echo -e "${RED}🗑️  Sandbox Temizlik Menüsü${NC}"
-    echo "1) Sadece Container'ları Durdur"
-    echo "2) Container'ları Durdur + Sil"
-    echo "3) Container'ları + Image'ları Sil (Tam Temizlik)"
+    echo "1) Sadece Container'ları Durdur (veriler korunur)"
+    echo "2) Container'ları + Verileri Sil (sandbox sıfırla)"
+    echo "3) Container'ları + Image'ları + Verileri Sil (tam temizlik)"
     echo "4) Ana Menüye Dön"
     
     read -p "Temizlik seviyesini seçin [1-4]: " cleanup_choice
@@ -165,19 +165,25 @@ stop_containers() {
 
 # Container'ları durdur ve sil
 stop_and_remove_containers() {
-    echo -e "${YELLOW}🗑️  Container'lar siliniyor...${NC}"
+    echo -e "${YELLOW}🗑️  Container'lar ve veriler siliniyor...${NC}"
     
     if [ -d "docker-chromium" ]; then
-        cd docker-chromium && docker-compose down && cd ..
-        echo -e "${GREEN}✓ Chromium container'ı silindi${NC}"
+        cd docker-chromium && docker-compose down -v && cd ..
+        echo -e "${GREEN}✓ Chromium container'ı ve verileri silindi${NC}"
     fi
     
     if [ -d "docker-code-server" ]; then
-        cd docker-code-server && docker-compose down && cd ..
-        echo -e "${GREEN}✓ Code Server container'ı silindi${NC}"
+        cd docker-code-server && docker-compose down -v && cd ..
+        echo -e "${GREEN}✓ Code Server container'ı ve verileri silindi${NC}"
+        
+        # Host sistemdeki veri klasörünü de sil
+        if [ -d "$HOME/docker/code-server" ]; then
+            rm -rf "$HOME/docker/code-server"
+            echo -e "${GREEN}✓ Host sistemdeki veriler temizlendi${NC}"
+        fi
     fi
     
-    echo -e "${GREEN}🎉 Tüm container'lar silindi!${NC}"
+    echo -e "${GREEN}🎉 Tüm container'lar ve veriler silindi! (Temiz sandbox)${NC}"
     read -p "Ana menüye dönmek için Enter'a basın..."
     select_sandbox
 }

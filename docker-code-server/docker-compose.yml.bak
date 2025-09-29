@@ -9,7 +9,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Istanbul
-      - PASSWORD=degistir-bunu
+      - PASSWORD=123456
       # - HASHED_PASSWORD=  # PASSWORD yerine ileri seviye istersen
     volumes:
       - ${HOME}/docker/code-server/config:/config

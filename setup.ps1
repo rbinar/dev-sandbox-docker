@@ -133,9 +133,9 @@ function Setup-CodeServer {
 # Temizlik menüsü
 function Show-CleanupMenu {
     Write-Host "🗑️  Sandbox Temizlik Menüsü" -ForegroundColor Red
-    Write-Host "1) Sadece Container'ları Durdur" -ForegroundColor White
-    Write-Host "2) Container'ları Durdur + Sil" -ForegroundColor White
-    Write-Host "3) Container'ları + Image'ları Sil (Tam Temizlik)" -ForegroundColor White
+    Write-Host "1) Sadece Container'ları Durdur (veriler korunur)" -ForegroundColor White
+    Write-Host "2) Container'ları + Verileri Sil (sandbox sıfırla)" -ForegroundColor White
+    Write-Host "3) Container'ları + Image'ları + Verileri Sil (tam temizlik)" -ForegroundColor White
     Write-Host "4) Ana Menüye Dön" -ForegroundColor White
     
     $cleanupChoice = Read-Host "Temizlik seviyesini seçin [1-4]"
@@ -177,23 +177,23 @@ function Stop-Containers {
 
 # Container'ları durdur ve sil
 function Stop-AndRemoveContainers {
-    Write-Host "🗑️  Container'lar siliniyor..." -ForegroundColor Yellow
+    Write-Host "🗑️  Container'lar ve veriler siliniyor..." -ForegroundColor Yellow
     
     if (Test-Path "docker-chromium") {
         Push-Location "docker-chromium"
-        docker-compose down
+        docker-compose down -v
         Pop-Location
-        Write-Host "✓ Chromium container'ı silindi" -ForegroundColor Green
+        Write-Host "✓ Chromium container'ı ve verileri silindi" -ForegroundColor Green
     }
     
     if (Test-Path "docker-code-server") {
         Push-Location "docker-code-server"
-        docker-compose down
+        docker-compose down -v
         Pop-Location
-        Write-Host "✓ Code Server container'ı silindi" -ForegroundColor Green
+        Write-Host "✓ Code Server container'ı ve verileri silindi" -ForegroundColor Green
     }
     
-    Write-Host "🎉 Tüm container'lar silindi!" -ForegroundColor Green
+    Write-Host "🎉 Tüm container'lar ve veriler silindi! (Temiz sandbox)" -ForegroundColor Green
     Read-Host "Ana menüye dönmek için Enter'a basın"
     Select-Sandbox
 }

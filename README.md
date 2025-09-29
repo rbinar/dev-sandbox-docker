@@ -86,7 +86,9 @@ docker-compose up -d
 
 Setup script aracılığıyla:
 1. **Container Durdur** - Sandbox'ları durdurur (veriler korunur)
-2. **Container Sil** - Container'ları siler (image'lar kalır)
-3. **Tam Temizlik** - Her şeyi siler (container + image + volume'lar)
+2. **Sandbox Sıfırla** - Container'ları + verileri siler (temiz başlangıç)
+3. **Tam Temizlik** - Her şeyi siler (container + image + veriler)
+
+> **💡 Sandbox Felsefesi**: Her test/deneme sonrası "Sandbox Sıfırla" kullanarak temiz ortamda başlayın!
 
 ---
