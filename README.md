@@ -45,6 +45,8 @@ Bu repository, **güvenlik odaklı** Docker sandbox ortamları koleksiyonudur. A
 
 **Kolay kurulum için setup scriptlerini kullanın:**
 
+<img width="1622" height="1392" alt="image" src="https://github.com/user-attachments/assets/bdf1e9d3-490f-4f81-b4bf-f2ab9e1f5aa0" />
+
 #### macOS/Linux:
 ```bash
 chmod +x setup.sh
