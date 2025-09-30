@@ -1,7 +1,7 @@
 services:
   chromium:
     image: lscr.io/linuxserver/chromium:5f5dd27e-ls102
-    container_name: chromium
+    container_name: sandbox-chromium
     restart: unless-stopped
     ports:
       - "3000:3000"   # noVNC (HTTP)

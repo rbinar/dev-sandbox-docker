@@ -1,6 +1,6 @@
-```bash
+```markdown
 docker run -d \
-  --name chromium \
+  --name sandbox-chromium \
   -p 3000:3000 -p 3001:3001 \
   -e PUID=1000 -e PGID=1000 -e TZ=Europe/Istanbul \
   -v chromium_config:/config \
