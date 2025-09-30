@@ -1,7 +1,7 @@
 services:
   code-server:
     image: lscr.io/linuxserver/code-server:latest
-    container_name: code-server
+    container_name: sandbox-code-server
     restart: unless-stopped
     ports:
       - "8443:8443"

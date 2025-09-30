@@ -30,12 +30,12 @@ Bu repository, **güvenlik odaklı** Docker sandbox ortamları koleksiyonudur. A
 
 ### 📁 Güvenli Sandbox'lar
 
-- **[docker-chromium](./docker-chromium/)** - İzole Chromium tarayıcı ortamı
+- **[sandbox-chromium](./sandbox-chromium/)** - İzole Chromium tarayıcı ortamı
   - Güvenilmeyen web sitelerini güvenle ziyaret etme
   - Şüpheli dosyaları ana sistemden bağımsız indirme/test etme
   - Web geliştirme projelerini güvenli ortamda test etme
 
-- **[docker-code-server](./docker-code-server/)** - İzole VS Code editör ortamı  
+- **[sandbox-code-server](./sandbox-code-server/)** - İzole VS Code editör ortamı  
   - Güvenilmeyen kodları ana sistemi etkilemeden çalıştırma
   - Şüpheli extension'ları güvenle test etme
   - Hassas projelerinizi izole ortamda geliştirme
@@ -70,7 +70,7 @@ Setup script şunları yapar:
 Eğer manuel kurulum tercih ediyorsanız:
 
 ```bash
-cd docker-chromium  # veya docker-code-server
+cd sandbox-chromium  # veya sandbox-code-server
 docker-compose up -d
 # Güvenli ortamınız hazır!
 ```

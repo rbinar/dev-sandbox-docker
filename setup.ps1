@@ -76,7 +76,7 @@ function Select-Sandbox {
     switch ($choice) {
         "1" {
             Write-Host "🌐 Chromium Browser sandbox kuruluyor..." -ForegroundColor Green
-            Set-Location "docker-chromium"
+            Set-Location "sandbox-chromium"
             docker-compose up -d
             Write-Host "✓ Chromium hazır! Erişim: https://localhost:3001" -ForegroundColor Green
         }
@@ -87,7 +87,7 @@ function Select-Sandbox {
         }
         "3" {
             Write-Host "🚀 Her iki sandbox da kuruluyor..." -ForegroundColor Green
-            Push-Location "docker-chromium"
+            Push-Location "sandbox-chromium"
             docker-compose up -d
             Pop-Location
             Setup-CodeServer
@@ -121,7 +121,7 @@ function Setup-CodeServer {
     }
     
     # docker-compose.yml dosyasında şifreyi güncelle
-    Push-Location "docker-code-server"
+    Push-Location "sandbox-code-server"
     $content = Get-Content "docker-compose.yml" -Raw
     $updatedContent = $content -replace "PASSWORD=degistir-bunu", "PASSWORD=$plainPassword"
     Set-Content "docker-compose.yml" -Value $updatedContent
@@ -156,15 +156,15 @@ function Show-CleanupMenu {
 function Stop-Containers {
     Write-Host "⏹️  Container'lar durduruluyor..." -ForegroundColor Yellow
     
-    if (Test-Path "docker-chromium") {
-        Push-Location "docker-chromium"
+    if (Test-Path "sandbox-chromium") {
+        Push-Location "sandbox-chromium"
         docker-compose stop
         Pop-Location
         Write-Host "✓ Chromium container'ı durduruldu" -ForegroundColor Green
     }
     
-    if (Test-Path "docker-code-server") {
-        Push-Location "docker-code-server"
+    if (Test-Path "sandbox-code-server") {
+        Push-Location "sandbox-code-server"
         docker-compose stop
         Pop-Location
         Write-Host "✓ Code Server container'ı durduruldu" -ForegroundColor Green
@@ -179,15 +179,15 @@ function Stop-Containers {
 function Stop-AndRemoveContainers {
     Write-Host "🗑️  Container'lar ve veriler siliniyor..." -ForegroundColor Yellow
     
-    if (Test-Path "docker-chromium") {
-        Push-Location "docker-chromium"
+    if (Test-Path "sandbox-chromium") {
+        Push-Location "sandbox-chromium"
         docker-compose down -v
         Pop-Location
         Write-Host "✓ Chromium container'ı ve verileri silindi" -ForegroundColor Green
     }
     
-    if (Test-Path "docker-code-server") {
-        Push-Location "docker-code-server"
+    if (Test-Path "sandbox-code-server") {
+        Push-Location "sandbox-code-server"
         docker-compose down -v
         Pop-Location
         Write-Host "✓ Code Server container'ı ve verileri silindi" -ForegroundColor Green
@@ -213,14 +213,14 @@ function Start-FullCleanup {
         Write-Host "🔥 Tam temizlik başlıyor..." -ForegroundColor Red
         
         # Container'ları durdur ve sil
-        if (Test-Path "docker-chromium") {
-            Push-Location "docker-chromium"
+        if (Test-Path "sandbox-chromium") {
+            Push-Location "sandbox-chromium"
             docker-compose down -v
             Pop-Location
         }
         
-        if (Test-Path "docker-code-server") {
-            Push-Location "docker-code-server"
+        if (Test-Path "sandbox-code-server") {
+            Push-Location "sandbox-code-server"
             docker-compose down -v
             Pop-Location
         }

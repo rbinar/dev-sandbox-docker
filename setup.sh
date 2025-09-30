@@ -65,7 +65,7 @@ select_sandbox() {
     case $choice in
         1)
             echo -e "${GREEN}🌐 Chromium Browser sandbox kuruluyor...${NC}"
-            cd docker-chromium
+            cd sandbox-chromium
             docker-compose up -d
             echo -e "${GREEN}✓ Chromium hazır! Erişim: https://localhost:3001${NC}"
             ;;
@@ -76,7 +76,7 @@ select_sandbox() {
             ;;
         3)
             echo -e "${GREEN}🚀 Her iki sandbox da kuruluyor...${NC}"
-            cd docker-chromium && docker-compose up -d && cd ..
+            cd sandbox-chromium && docker-compose up -d && cd ..
             setup_code_server
             echo -e "${GREEN}✓ Chromium: https://localhost:3001${NC}"
             echo -e "${GREEN}✓ Code Server: http://localhost:8443${NC}"
@@ -107,7 +107,7 @@ setup_code_server() {
     fi
     
     # docker-compose.yml dosyasında şifreyi güncelle
-    cd docker-code-server
+    cd sandbox-code-server
     sed -i.bak "s/PASSWORD=degistir-bunu/PASSWORD=$user_password/" docker-compose.yml
     docker-compose up -d
     echo -e "${GREEN}✓ Şifreniz: $user_password${NC}"
@@ -148,13 +148,13 @@ cleanup_menu() {
 stop_containers() {
     echo -e "${YELLOW}⏹️  Container'lar durduruluyor...${NC}"
     
-    if [ -d "docker-chromium" ]; then
-        cd docker-chromium && docker-compose stop && cd ..
+    if [ -d "sandbox-chromium" ]; then
+        cd sandbox-chromium && docker-compose stop && cd ..
         echo -e "${GREEN}✓ Chromium container'ı durduruldu${NC}"
     fi
     
-    if [ -d "docker-code-server" ]; then
-        cd docker-code-server && docker-compose stop && cd ..
+    if [ -d "sandbox-code-server" ]; then
+        cd sandbox-code-server && docker-compose stop && cd ..
         echo -e "${GREEN}✓ Code Server container'ı durduruldu${NC}"
     fi
     
@@ -167,13 +167,13 @@ stop_containers() {
 stop_and_remove_containers() {
     echo -e "${YELLOW}🗑️  Container'lar ve veriler siliniyor...${NC}"
     
-    if [ -d "docker-chromium" ]; then
-        cd docker-chromium && docker-compose down -v && cd ..
+    if [ -d "sandbox-chromium" ]; then
+        cd sandbox-chromium && docker-compose down -v && cd ..
         echo -e "${GREEN}✓ Chromium container'ı ve verileri silindi${NC}"
     fi
     
-    if [ -d "docker-code-server" ]; then
-        cd docker-code-server && docker-compose down -v && cd ..
+    if [ -d "sandbox-code-server" ]; then
+        cd sandbox-code-server && docker-compose down -v && cd ..
         echo -e "${GREEN}✓ Code Server container'ı ve verileri silindi${NC}"
     fi
     
@@ -196,12 +196,12 @@ full_cleanup() {
         echo -e "${RED}🔥 Tam temizlik başlıyor...${NC}"
         
         # Container'ları durdur ve sil
-        if [ -d "docker-chromium" ]; then
-            cd docker-chromium && docker-compose down -v && cd ..
+        if [ -d "sandbox-chromium" ]; then
+            cd sandbox-chromium && docker-compose down -v && cd ..
         fi
         
-        if [ -d "docker-code-server" ]; then
-            cd docker-code-server && docker-compose down -v && cd ..
+        if [ -d "sandbox-code-server" ]; then
+            cd sandbox-code-server && docker-compose down -v && cd ..
         fi
         
         # Image'ları sil
