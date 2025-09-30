@@ -12,4 +12,7 @@ services:
       - PASSWORD=123456
       # - HASHED_PASSWORD=  # PASSWORD yerine ileri seviye istersen
     volumes:
-      - ${HOME}/docker/code-server/config:/config
+      - code_server_config:/config
+
+volumes:
+  code_server_config:

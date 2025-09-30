@@ -175,12 +175,6 @@ stop_and_remove_containers() {
     if [ -d "docker-code-server" ]; then
         cd docker-code-server && docker-compose down -v && cd ..
         echo -e "${GREEN}✓ Code Server container'ı ve verileri silindi${NC}"
-        
-        # Host sistemdeki veri klasörünü de sil
-        if [ -d "$HOME/docker/code-server" ]; then
-            rm -rf "$HOME/docker/code-server"
-            echo -e "${GREEN}✓ Host sistemdeki veriler temizlendi${NC}"
-        fi
     fi
     
     echo -e "${GREEN}🎉 Tüm container'lar ve veriler silindi! (Temiz sandbox)${NC}"
