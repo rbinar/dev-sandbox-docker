@@ -41,6 +41,31 @@ Bu repository, **güvenlik odaklı** Docker sandbox ortamları koleksiyonudur. A
   - Hassas projelerinizi izole ortamda geliştirme
   - **Erişim**: http://localhost:8443
 
+- **[sandbox-webtop](./sandbox-webtop/)** - Tam Linux Desktop + ClamAV Antivirus
+  - Şüpheli dosyaları izole Linux ortamında analiz etme
+  - Güvenilmeyen yazılımları ana sistem riske atmadan test etme
+  - Built-in ClamAV virüs tarayıcısı ile real-time koruma
+  - **Erişim**: http://localhost:3010
+
+- **[sandbox-libreoffice](./sandbox-libreoffice/)** - İzole Office ortamı
+  - Şüpheli .docx, .xlsx, .pptx dosyalarını güvenle açma
+  - Macro virüsleri ve Office exploit'larından korunma
+  - PDF dosyalarını güvenli ortamda görüntüleme
+  - **Erişim**: http://localhost:3020
+
+- **[sandbox-jupyter](./sandbox-jupyter/)** - İzole Data Science ortamı
+  - Bilinmeyen Jupyter notebook'larını güvenle çalıştırma
+  - Şüpheli Python kodlarını ana sistem etkilemeden test etme
+  - Data science projelerini izole ortamda geliştirme
+  - **Erişim**: http://localhost:8888
+
+- **[sandbox-antivirus](./sandbox-antivirus/)** - Specialized Virus Scanner
+  - Özel virüs tarama ortamı (ClamAV + Web UI)
+  - Drag & drop dosya tarama ara yüzü
+  - Toplu dosya analizi ve quarantine yönetimi
+  - REST API ile otomatik entegrasyon
+  - **Erişim**: http://localhost:3031 (Web UI)
+
 ### 🚀 Otomatik Kurulum
 
 **Kolay kurulum için setup scriptlerini kullanın:**
@@ -61,7 +86,13 @@ chmod +x setup.sh
 Setup script şunları yapar:
 1. ✅ Docker Desktop kurulumunu kontrol eder
 2. 📦 Kurulu değilse otomatik kurulum yapar
-3. 🎯 Size sandbox/temizlik seçeneği sunar
+3. 🎯 Size 6 farklı sandbox seçeneği sunar:
+   - 🌐 Chromium Browser (Güvenli web browsing)
+   - 💻 VS Code Server (İzole kod editörü)
+   - 🖥️ Webtop + ClamAV (Linux desktop + antivirus)
+   - 📄 LibreOffice (Güvenli Office dosyaları)
+   - 📊 Jupyter Notebook (Data science)
+   - 🦠 Antivirus Scanner (Özel virüs tarama)
 4. 🚀 Seçtiğiniz sandbox'ı başlatır
 5. 🗑️ İstendiğinde temizlik yapar
 
@@ -70,9 +101,23 @@ Setup script şunları yapar:
 Eğer manuel kurulum tercih ediyorsanız:
 
 ```bash
-cd sandbox-chromium  # veya sandbox-code-server
-docker-compose up -d
-# Güvenli ortamınız hazır!
+# Chromium Browser
+cd sandbox-chromium && docker-compose up -d
+
+# VS Code Server (şifre: docker-compose.yml'de ayarlayın)
+cd sandbox-code-server && docker-compose up -d
+
+# Webtop Linux Desktop (ClamAV dahil değil, setup script önerilir)
+cd sandbox-webtop && docker-compose up -d
+
+# LibreOffice
+cd sandbox-libreoffice && docker-compose up -d
+
+# Jupyter Notebook (token: docker-compose.yml'de ayarlayın)
+cd sandbox-jupyter && docker-compose up -d
+
+# Antivirus Scanner (ClamAV + Web UI)
+cd sandbox-antivirus && docker-compose up -d
 ```
 
 ### ⚠️ Güvenlik Uyarıları

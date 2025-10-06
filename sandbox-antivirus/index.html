@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🛡️ ClamAV Scanner - Drag & Drop</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #d32f2f; text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .upload-area { border: 3px dashed #4caf50; border-radius: 10px; padding: 40px; text-align: center; margin: 20px 0; background: #f9f9f9; transition: all 0.3s; cursor: pointer; }
+        .upload-area.dragover { border-color: #2196f3; background: #e3f2fd; }
+        .upload-area:hover { border-color: #2196f3; background: #f0f8f0; }
+        .btn { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin: 10px; }
+        .btn:hover { background: #45a049; }
+        .file-item { background: #f0f0f0; padding: 10px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .banner { background: #e8f5e8; border: 2px solid #4caf50; padding: 15px; margin: 20px 0; border-radius: 8px; text-align: center; }
+        .cmd { background: #f5f5f5; padding: 15px; border-radius: 4px; font-family: monospace; margin: 10px 0; border-left: 4px solid #2196f3; font-size: 12px; }
+        .info-box { background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ ClamAV Antivirus Scanner</h1>
+        <div class="subtitle">🍎 Apple Silicon Uyumlu • Sürükle & Bırak Tarama</div>
+        
+        <div class="banner">
+            <strong>🔒 TAM İZOLASYON GÜVENCESİ</strong><br>
+            Dosyalar container içinde taranır, ana sisteme erişim yoktur
+        </div>
+        
+        <div class="info-box">
+            <strong>ℹ️ Nasıl Kullanılır:</strong><br>
+            1. Aşağıdaki alana dosyaları sürükleyip bırakın veya tıklayın<br>
+            2. Dosya seçtikten sonra tarama komutları otomatik oluşur<br>
+            3. Komutları terminalinizde çalıştırın<br>
+            <br>
+            <strong>Desteklenen:</strong> Tüm dosya türleri • Güvenli komut oluşturma
+        </div>
+        
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size: 24px; margin-bottom: 15px;">📁</div>
+            <div><strong>Dosyaları buraya sürükleyin veya tıklayın</strong></div>
+            <div style="margin: 15px 0; color: #666;">Dosya seçimi yapın</div>
+            <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFiles()">
+            <button class="btn">📁 Dosya Seç</button>
+        </div>
+        
+        <div id="fileList"></div>
+        <div id="commands"></div>
+        
+        <h3>💻 Hızlı Test Komutları</h3>
+        <div class="cmd">
+            # ClamAV durumu kontrol<br>
+            docker exec sandbox-antivirus clamscan --version<br><br>
+            
+            # Hızlı EICAR virüs testi<br>
+            echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' | docker exec -i sandbox-antivirus sh -c 'cat > /tmp/scan/test.txt && clamscan /tmp/scan/test.txt'
+        </div>
+        
+        <div style="background: #fff3e0; border: 1px solid #ff9800; padding: 15px; margin: 20px 0; border-radius: 6px;">
+            <strong>⚠️ Önemli Not:</strong> Bu web arayüzü sadece tarama komutlarını oluşturur. 
+            Gerçek dosya tarama işlemi terminal komutları ile yapılır. 
+            Güvenlik için dosyalar doğrudan yüklenmez.
+        </div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        // Drag & Drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            handleFiles();
+        });
+        
+        function handleFiles() {
+            const files = fileInput.files;
+            if (files.length === 0) return;
+            
+            let html = '<h3>Seçilen Dosyalar (' + files.length + '):</h3>';
+            for (let i = 0; i < files.length; i++) {
+                html += '<div class="file-item">';
+                html += '<span>📄 ' + files[i].name + ' (' + formatFileSize(files[i].size) + ')</span>';
+                html += '</div>';
+            }
+            
+            html += '<h3>🔍 Tarama Komutları:</h3>';
+            html += '<div class="cmd">';
+            
+            for (let i = 0; i < files.length; i++) {
+                const safeName = files[i].name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                html += '# Dosya ' + (i + 1) + ': ' + files[i].name + '<br>';
+                html += 'docker cp "' + files[i].name + '" sandbox-antivirus:/tmp/scan/' + safeName + '<br>';
+                html += 'docker exec sandbox-antivirus clamscan /tmp/scan/' + safeName + '<br><br>';
+            }
+            
+            html += '# Tüm dosyaları toplu tara<br>';
+            html += 'docker exec sandbox-antivirus clamscan -r /tmp/scan/<br><br>';
+            html += '# Tarama sonrası temizlik<br>';
+            html += 'docker exec sandbox-antivirus rm -rf /tmp/scan/*';
+            html += '</div>';
+            
+            html += '<div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin: 15px 0;">';
+            html += '<strong>📋 Kullanım Adımları:</strong><br>';
+            html += '1. Yukarıdaki komutları kopyalayın<br>';
+            html += '2. Dosyalarınızın bulunduğu dizinde terminal açın<br>';
+            html += '3. Komutları sırayla yapıştırın ve çalıştırın<br>';
+            html += '4. Tarama sonuçlarını inceleyin';
+            html += '</div>';
+            
+            document.getElementById('fileList').innerHTML = html;
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>

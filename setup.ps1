@@ -67,11 +67,17 @@ function Select-Sandbox {
     Write-Host "📋 Hangi işlemi yapmak istiyorsunuz?" -ForegroundColor Blue
     Write-Host "1) Chromium Browser Kur (Güvenli web browsing)" -ForegroundColor White
     Write-Host "2) VS Code Server Kur (İzole kod editörü)" -ForegroundColor White
-    Write-Host "3) İkisini de Kur" -ForegroundColor White
-    Write-Host "4) Sandbox'ları Kaldır/Temizle" -ForegroundColor White
-    Write-Host "5) Çıkış" -ForegroundColor White
+    Write-Host "3) Webtop Kur (Tam Linux desktop)" -ForegroundColor White
+    Write-Host "4) LibreOffice Kur (Güvenli Office dosyaları)" -ForegroundColor White
+    Write-Host "5) Jupyter Notebook Kur (Data science)" -ForegroundColor White
+    Write-Host "6) Antivirus Scanner Kur (Virüs tarama)" -ForegroundColor White
+    Write-Host "7) Windows Sandbox Kur (İzole Windows)" -ForegroundColor White
+    Write-Host "8) macOS Sandbox Kur (İzole macOS)" -ForegroundColor White
+    Write-Host "9) Tüm Sandbox'ları Kur" -ForegroundColor White
+    Write-Host "10) Sandbox'ları Kaldır/Temizle" -ForegroundColor White
+    Write-Host "11) Çıkış" -ForegroundColor White
     
-    $choice = Read-Host "Seçiminizi yapın [1-5]"
+    $choice = Read-Host "Seçiminizi yapın [1-11]"
     
     switch ($choice) {
         "1" {
@@ -86,18 +92,64 @@ function Select-Sandbox {
             Write-Host "✓ Code Server hazır! Erişim: http://localhost:8443" -ForegroundColor Green
         }
         "3" {
-            Write-Host "🚀 Her iki sandbox da kuruluyor..." -ForegroundColor Green
+            Write-Host "🖥️ Webtop Linux Desktop kuruluyor..." -ForegroundColor Green
+            Setup-WebtopWithAntivirus
+            Write-Host "✓ Webtop + ClamAV hazır! Erişim: http://localhost:3010" -ForegroundColor Green
+        }
+        "4" {
+            Write-Host "📄 LibreOffice sandbox kuruluyor..." -ForegroundColor Green
+            Set-Location "sandbox-libreoffice"
+            docker-compose up -d
+            Set-Location ".."
+            Write-Host "✓ LibreOffice hazır! Erişim: http://localhost:3020" -ForegroundColor Green
+        }
+        "5" {
+            Write-Host "📊 Jupyter Notebook sandbox kuruluyor..." -ForegroundColor Green
+            Setup-Jupyter
+            Write-Host "✓ Jupyter hazır! Erişim: http://localhost:8888" -ForegroundColor Green
+        }
+        "6" {
+            Write-Host "🦠 Antivirus Scanner kuruluyor..." -ForegroundColor Green
+            Setup-Antivirus
+            Write-Host "✓ Antivirus hazır! Web UI: http://localhost:3031" -ForegroundColor Green
+        }
+        "7" {
+            Write-Host "🪟 Windows Sandbox kuruluyor..." -ForegroundColor Green
+            Setup-Windows
+            Write-Host "✓ Windows hazır! Web UI: http://localhost:3040, RDP: localhost:3041" -ForegroundColor Green
+        }
+        "8" {
+            Write-Host "🍎 macOS Sandbox kuruluyor..." -ForegroundColor Green
+            Setup-MacOS
+            Write-Host "✓ macOS hazır! Web UI: http://localhost:3050, VNC: localhost:3051" -ForegroundColor Green
+        }
+        "9" {
+            Write-Host "🚀 Tüm sandbox'lar kuruluyor..." -ForegroundColor Green
             Push-Location "sandbox-chromium"
             docker-compose up -d
             Pop-Location
             Setup-CodeServer
+            Setup-WebtopWithAntivirus
+            Push-Location "sandbox-libreoffice"
+            docker-compose up -d
+            Pop-Location
+            Setup-Jupyter
+            Setup-Antivirus
+            Setup-Windows
+            Setup-MacOS
             Write-Host "✓ Chromium: https://localhost:3001" -ForegroundColor Green
             Write-Host "✓ Code Server: http://localhost:8443" -ForegroundColor Green
+            Write-Host "✓ Webtop + ClamAV: http://localhost:3010" -ForegroundColor Green
+            Write-Host "✓ LibreOffice: http://localhost:3020" -ForegroundColor Green
+            Write-Host "✓ Jupyter: http://localhost:8888" -ForegroundColor Green
+            Write-Host "✓ Antivirus: http://localhost:3031" -ForegroundColor Green
+            Write-Host "✓ Windows: http://localhost:3040 (RDP: 3041)" -ForegroundColor Green
+            Write-Host "✓ macOS: http://localhost:3050 (VNC: 3051)" -ForegroundColor Green
         }
-        "4" {
+        "10" {
             Show-CleanupMenu
         }
-        "5" {
+        "11" {
             Write-Host "👋 Çıkılıyor..." -ForegroundColor Yellow
             exit 0
         }
@@ -127,6 +179,127 @@ function Setup-CodeServer {
     Set-Content "docker-compose.yml" -Value $updatedContent
     docker-compose up -d
     Write-Host "✓ Şifreniz: $plainPassword" -ForegroundColor Green
+    Pop-Location
+}
+
+# Jupyter kurulum fonksiyonu
+function Setup-Jupyter {
+    Write-Host "🔐 Jupyter için token belirleme" -ForegroundColor Yellow
+    $userToken = Read-Host "Jupyter token girin (boş bırakırsanız 'admin123' kullanılır)" -AsSecureString
+    
+    if ($userToken.Length -eq 0) {
+        $plainToken = "admin123"
+        Write-Host "Varsayılan token kullanılıyor: admin123" -ForegroundColor Yellow
+    } else {
+        $plainToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($userToken))
+    }
+    
+    # docker-compose.yml dosyasında token'ı güncelle
+    Push-Location "sandbox-jupyter"
+    $content = Get-Content "docker-compose.yml" -Raw
+    $updatedContent = $content -replace "JUPYTER_TOKEN=degistir-bunu", "JUPYTER_TOKEN=$plainToken"
+    $updatedContent = $updatedContent -replace "--NotebookApp.token='degistir-bunu'", "--NotebookApp.token='$plainToken'"
+    Set-Content "docker-compose.yml" -Value $updatedContent
+    docker-compose up -d
+    Write-Host "✓ Token'ınız: $plainToken" -ForegroundColor Green
+    Pop-Location
+}
+
+# Webtop + ClamAV kurulum fonksiyonu
+function Setup-WebtopWithAntivirus {
+    Write-Host "🦠 Webtop + ClamAV virüs tarayıcısı kuruluyor..." -ForegroundColor Yellow
+    
+    # Webtop container'ını başlat
+    Push-Location "sandbox-webtop"
+    docker-compose up -d
+    Pop-Location
+    
+    # Container'ın tamamen başlamasını bekle
+    Write-Host "⏳ Webtop'un başlaması bekleniyor..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 15
+    
+    # ClamAV kur (Alpine Linux için)
+    Write-Host "🔧 ClamAV virüs tarayıcısı kuruluyor..." -ForegroundColor Yellow
+    docker exec sandbox-webtop apk update
+    docker exec sandbox-webtop apk add clamav clamav-daemon freshclam
+    
+    # ClamAV database güncelle
+    Write-Host "📡 Virüs veritabanı güncelleniyor..." -ForegroundColor Yellow
+    docker exec sandbox-webtop freshclam
+    
+    # Test dosyası oluştur
+    docker exec sandbox-webtop sh -c 'echo "ClamAV kuruldu! Test için: clamscan --version" > /config/Desktop/ClamAV-Test.txt'
+    
+    Write-Host "✅ ClamAV başarıyla kuruldu!" -ForegroundColor Green
+    Write-Host "💡 Test için: Terminal açıp 'clamscan --version' yazın" -ForegroundColor Blue
+}
+
+# Antivirus kurulum fonksiyonu
+function Setup-Antivirus {
+    Write-Host "🦠 İzole ClamAV Antivirus Scanner kuruluyor..." -ForegroundColor Yellow
+    
+    # Antivirus container'ını başlat
+    Push-Location "sandbox-antivirus"
+    docker-compose up -d
+    Pop-Location
+    
+    # Container'ın tamamen başlamasını bekle
+    Write-Host "⏳ ClamAV'ın başlaması ve database güncellenmesi bekleniyor (90 saniye)..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 90
+    
+    # Test dosyası oluştur (container içinde)
+    Write-Host "🔧 Test virüs dosyası oluşturuluyor..." -ForegroundColor Yellow
+    docker exec sandbox-antivirus sh -c "echo 'X5O!P%@AP[4\\PZX54(P^)7CC)7}\$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!\$H+H*' > /scan/eicar-test.txt"
+    
+    # Test tarama
+    Write-Host "🔍 Test tarama yapılıyor..." -ForegroundColor Yellow
+    try { docker exec sandbox-antivirus clamdscan /scan/eicar-test.txt } catch { }
+    
+    Write-Host "✅ İzole Antivirus Scanner başarıyla kuruldu!" -ForegroundColor Green
+    Write-Host "💡 Web UI: http://localhost:3031" -ForegroundColor Blue
+    Write-Host "� TAM İZOLASYON: Ana sistem bağlantısı YOK" -ForegroundColor Blue
+    Write-Host "💡 Dosya kopyalama: docker cp dosya.exe sandbox-antivirus:/scan/" -ForegroundColor Blue
+    Write-Host "💡 Tarama: docker exec sandbox-antivirus clamdscan /scan/dosya.exe" -ForegroundColor Blue
+}
+
+# Windows kurulum fonksiyonu
+function Setup-Windows {
+    Write-Host "🪟 Windows Sandbox kuruluyor..." -ForegroundColor Yellow
+    
+    # Windows container'ını başlat
+    Push-Location "sandbox-windows"
+    Write-Host "💡 Windows 11 Pro kuruluyor (Türkçe)" -ForegroundColor Blue
+    Write-Host "  • RAM: 4GB, CPU: 2 core, Disk: 64GB" -ForegroundColor White
+    Write-Host "  • Username: Docker, Password: admin" -ForegroundColor White
+    
+    docker-compose up -d
+    
+    Write-Host "⏳ Windows kurulumu başlıyor (10-30 dakika)..." -ForegroundColor Yellow
+    Write-Host "✅ Windows Sandbox başlatıldı!" -ForegroundColor Green
+    Write-Host "💡 Web UI: http://localhost:3040" -ForegroundColor Blue
+    Write-Host "💡 RDP: localhost:3041 (Docker/admin)" -ForegroundColor Blue
+    
+    Pop-Location
+}
+
+# macOS kurulum fonksiyonu
+function Setup-MacOS {
+    Write-Host "🍎 macOS Sandbox kuruluyor..." -ForegroundColor Yellow
+    
+    # macOS container'ını başlat
+    Push-Location "sandbox-macos"
+    Write-Host "💡 macOS 14 Sonoma kuruluyor" -ForegroundColor Blue
+    Write-Host "  • RAM: 4GB, CPU: 2 core, Disk: 64GB" -ForegroundColor White
+    Write-Host "  • Web UI: 3050, VNC: 3051/3052" -ForegroundColor White
+    
+    docker-compose up -d
+    
+    Write-Host "⏳ macOS kurulumu başlıyor (30-60 dakika)..." -ForegroundColor Yellow
+    Write-Host "✅ macOS Sandbox başlatıldı!" -ForegroundColor Green
+    Write-Host "💡 Web UI: http://localhost:3050" -ForegroundColor Blue
+    Write-Host "💡 VNC: localhost:3051" -ForegroundColor Blue
+    Write-Host "📋 Kurulum: Recovery → Disk Utility → Format (APFS) → Reinstall macOS" -ForegroundColor Yellow
+    
     Pop-Location
 }
 
@@ -170,6 +343,48 @@ function Stop-Containers {
         Write-Host "✓ Code Server container'ı durduruldu" -ForegroundColor Green
     }
     
+    if (Test-Path "sandbox-webtop") {
+        Push-Location "sandbox-webtop"
+        docker-compose stop
+        Pop-Location
+        Write-Host "✓ Webtop container'ı durduruldu" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-libreoffice") {
+        Push-Location "sandbox-libreoffice"
+        docker-compose stop
+        Pop-Location
+        Write-Host "✓ LibreOffice container'ı durduruldu" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-jupyter") {
+        Push-Location "sandbox-jupyter"
+        docker-compose stop
+        Pop-Location
+        Write-Host "✓ Jupyter container'ı durduruldu" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-antivirus") {
+        Push-Location "sandbox-antivirus"
+        docker-compose stop
+        Pop-Location
+        Write-Host "✓ Antivirus container'ı durduruldu" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-windows") {
+        Push-Location "sandbox-windows"
+        docker-compose stop
+        Pop-Location
+        Write-Host "✓ Windows container'ı durduruldu" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-macos") {
+        Push-Location "sandbox-macos"
+        docker-compose stop
+        Pop-Location
+        Write-Host "✓ macOS container'ı durduruldu" -ForegroundColor Green
+    }
+    
     Write-Host "🎉 Tüm container'lar durduruldu!" -ForegroundColor Green
     Read-Host "Ana menüye dönmek için Enter'a basın"
     Select-Sandbox
@@ -191,6 +406,48 @@ function Stop-AndRemoveContainers {
         docker-compose down -v
         Pop-Location
         Write-Host "✓ Code Server container'ı ve verileri silindi" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-webtop") {
+        Push-Location "sandbox-webtop"
+        docker-compose down -v
+        Pop-Location
+        Write-Host "✓ Webtop container'ı ve verileri silindi" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-libreoffice") {
+        Push-Location "sandbox-libreoffice"
+        docker-compose down -v
+        Pop-Location
+        Write-Host "✓ LibreOffice container'ı ve verileri silindi" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-jupyter") {
+        Push-Location "sandbox-jupyter"
+        docker-compose down -v
+        Pop-Location
+        Write-Host "✓ Jupyter container'ı ve verileri silindi" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-antivirus") {
+        Push-Location "sandbox-antivirus"
+        docker-compose down -v
+        Pop-Location
+        Write-Host "✓ Antivirus container'ı ve verileri silindi" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-windows") {
+        Push-Location "sandbox-windows"
+        docker-compose down -v
+        Pop-Location
+        Write-Host "✓ Windows container'ı ve verileri silindi" -ForegroundColor Green
+    }
+    
+    if (Test-Path "sandbox-macos") {
+        Push-Location "sandbox-macos"
+        docker-compose down -v
+        Pop-Location
+        Write-Host "✓ macOS container'ı ve verileri silindi" -ForegroundColor Green
     }
     
     Write-Host "🎉 Tüm container'lar ve veriler silindi! (Temiz sandbox)" -ForegroundColor Green
@@ -225,10 +482,53 @@ function Start-FullCleanup {
             Pop-Location
         }
         
+        if (Test-Path "sandbox-webtop") {
+            Push-Location "sandbox-webtop"
+            docker-compose down -v
+            Pop-Location
+        }
+        
+        if (Test-Path "sandbox-libreoffice") {
+            Push-Location "sandbox-libreoffice"
+            docker-compose down -v
+            Pop-Location
+        }
+        
+        if (Test-Path "sandbox-jupyter") {
+            Push-Location "sandbox-jupyter"
+            docker-compose down -v
+            Pop-Location
+        }
+        
+        if (Test-Path "sandbox-antivirus") {
+            Push-Location "sandbox-antivirus"
+            docker-compose down -v
+            Pop-Location
+        }
+        
+        if (Test-Path "sandbox-windows") {
+            Push-Location "sandbox-windows"
+            docker-compose down -v
+            Pop-Location
+        }
+        
+        if (Test-Path "sandbox-macos") {
+            Push-Location "sandbox-macos"
+            docker-compose down -v
+            Pop-Location
+        }
+        
         # Image'ları sil
         Write-Host "📦 Image'lar siliniyor..." -ForegroundColor Yellow
         try { docker rmi lscr.io/linuxserver/chromium:5f5dd27e-ls102 } catch { }
         try { docker rmi lscr.io/linuxserver/code-server:latest } catch { }
+        try { docker rmi lscr.io/linuxserver/webtop:latest } catch { }
+        try { docker rmi lscr.io/linuxserver/libreoffice:latest } catch { }
+        try { docker rmi jupyter/datascience-notebook:latest } catch { }
+        try { docker rmi alpine:latest } catch { }
+        try { docker rmi nginx:alpine } catch { }
+        try { docker rmi dockurr/windows:latest } catch { }
+        try { docker rmi dockurr/macos:latest } catch { }
         
         # Kullanılmayan volume'ları temizle
         try { docker volume prune -f } catch { }

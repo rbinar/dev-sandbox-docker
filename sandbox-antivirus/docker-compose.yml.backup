@@ -1,0 +1,355 @@
+services:
+  antivirus:
+    image: alpine:latest
+    container_name: sandbox-antivirus
+    restart: unless-stopped
+    ports:
+      - "3310:3310"   # ClamAV daemon
+    volumes:
+      - antivirus_quarantine:/quarantine
+      - antivirus_scan:/scan
+      - antivirus_logs:/var/log/clamav
+    working_dir: /tmp
+    command: >
+      sh -c "
+      echo 'Installing ClamAV on Alpine Linux...' &&
+      apk update &&
+      apk add --no-cache clamav freshclam &&
+      mkdir -p /var/lib/clamav /var/log/clamav /tmp/scan &&
+      echo 'Starting FreshClam for database update...' &&
+      echo 'DatabaseDirectory /var/lib/clamav' > /etc/clamav/freshclam.conf &&
+      echo 'DatabaseMirror database.clamav.net' >> /etc/clamav/freshclam.conf &&
+      echo 'Checks 24' >> /etc/clamav/freshclam.conf &&
+      freshclam &&
+      echo 'ClamAV database downloaded successfully!' &&
+      echo 'ClamAV Scanner ready - use clamscan for file scanning' &&
+      tail -f /dev/null
+      "
+    healthcheck:
+      test: ["CMD", "clamscan", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+
+  # Web interface with file upload
+  file-upload:
+    image: nginx:alpine
+    container_name: sandbox-antivirus-ui
+    restart: unless-stopped
+    ports:
+      - "3031:80"   # Web UI
+    depends_on:
+      - antivirus
+    command: >
+      sh -c "
+      # Install PHP for file upload processing
+      apk add --no-cache php82 php82-fpm php82-session php82-fileinfo &&
+      
+      # Configure PHP-FPM
+      sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' /etc/php82/php.ini &&
+      sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 100M/' /etc/php82/php.ini &&
+      sed -i 's/post_max_size = 8M/post_max_size = 100M/' /etc/php82/php.ini &&
+      sed -i 's/max_execution_time = 30/max_execution_time = 300/' /etc/php82/php.ini &&
+      
+      # Start PHP-FPM
+      php-fpm82 -D &&
+      
+      # Configure Nginx for PHP
+      cat > /etc/nginx/conf.d/default.conf << 'EOF'
+      server {
+          listen 80;
+          root /usr/share/nginx/html;
+          index index.php index.html;
+          
+          client_max_body_size 100M;
+          
+          location ~ \.php$ {
+              fastcgi_pass 127.0.0.1:9000;
+              fastcgi_index index.php;
+              include fastcgi_params;
+              fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+          }
+      }
+      EOF
+      
+      # Create upload directory
+      mkdir -p /usr/share/nginx/html/uploads &&
+      
+      # Create main HTML page
+      cat > /usr/share/nginx/html/index.html << 'EOF'
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>🛡️ ClamAV Scanner - Drag & Drop</title>
+          <meta charset=\"UTF-8\">
+          <style>
+              body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+              .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              h1 { color: #d32f2f; text-align: center; margin-bottom: 10px; }
+              .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+              .upload-area { border: 3px dashed #4caf50; border-radius: 10px; padding: 40px; text-align: center; margin: 20px 0; background: #f9f9f9; transition: all 0.3s; }
+              .upload-area.dragover { border-color: #2196f3; background: #e3f2fd; }
+              .upload-area:hover { border-color: #2196f3; background: #f0f8f0; }
+              .upload-btn { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin: 10px; }
+              .upload-btn:hover { background: #45a049; }
+              .scan-btn { background: #2196f3; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin: 10px; }
+              .scan-btn:hover { background: #1976d2; }
+              .scan-btn:disabled { background: #ccc; cursor: not-allowed; }
+              .results { margin: 20px 0; padding: 15px; border-radius: 6px; }
+              .results.clean { background: #e8f5e8; border: 1px solid #4caf50; color: #2e7d32; }
+              .results.infected { background: #ffebee; border: 1px solid #f44336; color: #c62828; }
+              .file-list { margin: 20px 0; }
+              .file-item { background: #f0f0f0; padding: 10px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+              .isolation-banner { background: #e8f5e8; border: 2px solid #4caf50; padding: 15px; margin: 20px 0; border-radius: 8px; text-align: center; }
+              .command-box { background: #f5f5f5; padding: 15px; border-radius: 4px; font-family: monospace; margin: 10px 0; border-left: 4px solid #2196f3; font-size: 14px; }
+              .loading { display: none; text-align: center; margin: 20px 0; }
+              .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          </style>
+      </head>
+      <body>
+          <div class=\"container\">
+              <h1>🛡️ ClamAV Antivirus Scanner</h1>
+              <div class=\"subtitle\">🍎 Apple Silicon Uyumlu • Sürükle & Bırak Tarama</div>
+              
+              <div class=\"isolation-banner\">
+                  <strong>🔒 TAM İZOLASYON GÜVENCESİ</strong><br>
+                  Dosyalar container içinde taranır, ana sisteme erişim yoktur
+              </div>
+              
+              <div class=\"upload-area\" id=\"uploadArea\">
+                  <div>📁 Dosyaları buraya sürükleyin veya tıklayın</div>
+                  <div style=\"margin: 15px 0; color: #666;\">Desteklenen: Tüm dosya türleri • Max: 100MB</div>
+                  <input type=\"file\" id=\"fileInput\" multiple style=\"display: none;\">
+                  <button class=\"upload-btn\" onclick=\"document.getElementById('fileInput').click()\">📁 Dosya Seç</button>
+              </div>
+              
+              <div class=\"file-list\" id=\"fileList\"></div>
+              
+              <div style=\"text-align: center;\">
+                  <button class=\"scan-btn\" id=\"scanBtn\" onclick=\"scanFiles()\" disabled>🔍 Tarama Başlat</button>
+                  <button class=\"upload-btn\" onclick=\"clearFiles()\">🗑️ Temizle</button>
+              </div>
+              
+              <div class=\"loading\" id=\"loading\">
+                  <div class=\"spinner\"></div>
+                  <div>Dosyalar taranıyor...</div>
+              </div>
+              
+              <div id=\"results\"></div>
+              
+              <h3>💻 Manuel Komutlar</h3>
+              <div class=\"command-box\">
+                  # Container durumu<br>
+                  docker logs sandbox-antivirus<br><br>
+                  
+                  # Version kontrol<br>
+                  docker exec sandbox-antivirus clamscan --version<br><br>
+                  
+                  # Manuel dosya kopyalama<br>
+                  docker cp suspicious_file.exe sandbox-antivirus:/tmp/scan/<br>
+                  docker exec sandbox-antivirus clamscan /tmp/scan/suspicious_file.exe
+              </div>
+          </div>
+          
+          <script>
+              let uploadedFiles = [];
+              
+              const uploadArea = document.getElementById('uploadArea');
+              const fileInput = document.getElementById('fileInput');
+              const fileList = document.getElementById('fileList');
+              const scanBtn = document.getElementById('scanBtn');
+              const results = document.getElementById('results');
+              const loading = document.getElementById('loading');
+              
+              // Drag & Drop handlers
+              uploadArea.addEventListener('dragover', (e) => {
+                  e.preventDefault();
+                  uploadArea.classList.add('dragover');
+              });
+              
+              uploadArea.addEventListener('dragleave', (e) => {
+                  e.preventDefault();
+                  uploadArea.classList.remove('dragover');
+              });
+              
+              uploadArea.addEventListener('drop', (e) => {
+                  e.preventDefault();
+                  uploadArea.classList.remove('dragover');
+                  handleFiles(e.dataTransfer.files);
+              });
+              
+              uploadArea.addEventListener('click', () => {
+                  fileInput.click();
+              });
+              
+              fileInput.addEventListener('change', (e) => {
+                  handleFiles(e.target.files);
+              });
+              
+              function handleFiles(files) {
+                  for (let file of files) {
+                      if (file.size > 100 * 1024 * 1024) {
+                          alert('Dosya çok büyük: ' + file.name + ' (Max: 100MB)');
+                          continue;
+                      }
+                      uploadedFiles.push(file);
+                  }
+                  updateFileList();
+                  scanBtn.disabled = uploadedFiles.length === 0;
+              }
+              
+              function updateFileList() {
+                  fileList.innerHTML = uploadedFiles.map((file, index) => 
+                      '<div class=\"file-item\">' +
+                      '<span>� ' + file.name + ' (' + formatFileSize(file.size) + ')</span>' +
+                      '<button onclick=\"removeFile(' + index + ')\" style=\"background: #f44336; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;\">✕</button>' +
+                      '</div>'
+                  ).join('');
+              }
+              
+              function removeFile(index) {
+                  uploadedFiles.splice(index, 1);
+                  updateFileList();
+                  scanBtn.disabled = uploadedFiles.length === 0;
+              }
+              
+              function clearFiles() {
+                  uploadedFiles = [];
+                  updateFileList();
+                  scanBtn.disabled = true;
+                  results.innerHTML = '';
+              }
+              
+              function formatFileSize(bytes) {
+                  if (bytes === 0) return '0 Bytes';
+                  const k = 1024;
+                  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                  const i = Math.floor(Math.log(bytes) / Math.log(k));
+                  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+              }
+              
+              async function scanFiles() {
+                  if (uploadedFiles.length === 0) return;
+                  
+                  loading.style.display = 'block';
+                  results.innerHTML = '';
+                  scanBtn.disabled = true;
+                  
+                  const formData = new FormData();
+                  uploadedFiles.forEach((file, index) => {
+                      formData.append('files[]', file);
+                  });
+                  
+                  try {
+                      const response = await fetch('scan.php', {
+                          method: 'POST',
+                          body: formData
+                      });
+                      
+                      const result = await response.text();
+                      results.innerHTML = result;
+                  } catch (error) {
+                      results.innerHTML = '<div class=\"results infected\">❌ Tarama hatası: ' + error.message + '</div>';
+                  } finally {
+                      loading.style.display = 'none';
+                      scanBtn.disabled = false;
+                  }
+              }
+          </script>
+      </body>
+      </html>
+      EOF
+      
+      # Create PHP upload and scan script
+      cat > /usr/share/nginx/html/scan.php << 'EOF'
+      <?php
+      if (\$_SERVER['REQUEST_METHOD'] !== 'POST' || !isset(\$_FILES['files'])) {
+          die('<div class=\"results infected\">❌ Geçersiz istek</div>');
+      }
+      
+      \$uploadDir = '/usr/share/nginx/html/uploads/';
+      \$results = [];
+      \$totalFiles = count(\$_FILES['files']['name']);
+      \$infectedCount = 0;
+      \$cleanCount = 0;
+      
+      echo '<div class=\"results\">';
+      echo '<h3>🔍 Tarama Sonuçları (' . \$totalFiles . ' dosya)</h3>';
+      
+      for (\$i = 0; \$i < \$totalFiles; \$i++) {
+          if (\$_FILES['files']['error'][\$i] !== UPLOAD_ERR_OK) {
+              echo '<div style=\"color: #f44336;\">❌ ' . htmlspecialchars(\$_FILES['files']['name'][\$i]) . ' - Upload hatası</div>';
+              continue;
+          }
+          
+          \$fileName = basename(\$_FILES['files']['name'][\$i]);
+          \$uploadPath = \$uploadDir . uniqid() . '_' . \$fileName;
+          
+          if (move_uploaded_file(\$_FILES['files']['tmp_name'][\$i], \$uploadPath)) {
+              // Copy file to antivirus container and scan
+              \$containerPath = '/tmp/scan/' . basename(\$uploadPath);
+              \$copyCmd = 'docker cp ' . escapeshellarg(\$uploadPath) . ' sandbox-antivirus:' . escapeshellarg(\$containerPath) . ' 2>&1';
+              \$scanCmd = 'docker exec sandbox-antivirus clamscan ' . escapeshellarg(\$containerPath) . ' 2>&1';
+              
+              exec(\$copyCmd, \$copyOutput, \$copyReturn);
+              
+              if (\$copyReturn === 0) {
+                  exec(\$scanCmd, \$scanOutput, \$scanReturn);
+                  \$scanResult = implode('\n', \$scanOutput);
+                  
+                  if (strpos(\$scanResult, 'FOUND') !== false) {
+                      echo '<div style=\"color: #f44336; margin: 5px 0;\">🦠 <strong>' . htmlspecialchars(\$fileName) . '</strong> - VİRÜS TESPİT EDİLDİ!</div>';
+                      if (preg_match('/: (.+) FOUND/', \$scanResult, \$matches)) {
+                          echo '<div style=\"color: #666; margin-left: 20px; font-size: 12px;\">Virüs türü: ' . htmlspecialchars(\$matches[1]) . '</div>';
+                      }
+                      \$infectedCount++;
+                  } elseif (strpos(\$scanResult, 'OK') !== false) {
+                      echo '<div style=\"color: #4caf50; margin: 5px 0;\">✅ <strong>' . htmlspecialchars(\$fileName) . '</strong> - Temiz</div>';
+                      \$cleanCount++;
+                  } else {
+                      echo '<div style=\"color: #ff9800; margin: 5px 0;\">⚠️ <strong>' . htmlspecialchars(\$fileName) . '</strong> - Tarama hatası</div>';
+                      echo '<div style=\"color: #666; margin-left: 20px; font-size: 12px;\">' . htmlspecialchars(\$scanResult) . '</div>';
+                  }
+              } else {
+                  echo '<div style=\"color: #f44336; margin: 5px 0;\">❌ <strong>' . htmlspecialchars(\$fileName) . '</strong> - Container kopyalama hatası</div>';
+              }
+              
+              // Clean up
+              unlink(\$uploadPath);
+              exec('docker exec sandbox-antivirus rm -f ' . escapeshellarg(\$containerPath) . ' 2>/dev/null');
+          } else {
+              echo '<div style=\"color: #f44336; margin: 5px 0;\">❌ <strong>' . htmlspecialchars(\$fileName) . '</strong> - Dosya yükleme hatası</div>';
+          }
+      }
+      
+      echo '<hr style=\"margin: 20px 0;\">';
+      echo '<div style=\"font-weight: bold;\">';
+      echo '📊 Özet: ' . \$totalFiles . ' dosya tarandı • ';
+      echo '<span style=\"color: #4caf50;\">✅ ' . \$cleanCount . ' temiz</span> • ';
+      echo '<span style=\"color: #f44336;\">🦠 ' . \$infectedCount . ' virüs</span>';
+      echo '</div>';
+      
+      if (\$infectedCount > 0) {
+          echo '<div style=\"background: #ffebee; border: 2px solid #f44336; padding: 15px; margin: 15px 0; border-radius: 6px; color: #c62828;\">';
+          echo '<strong>⚠️ GÜVENLİK UYARISI</strong><br>';
+          echo 'Virüs tespit edildi! Bu dosyalar izole container içinde tarandı ve ana sisteminize zarar vermedi.';
+          echo '</div>';
+      } else {
+          echo '<div style=\"background: #e8f5e8; border: 2px solid #4caf50; padding: 15px; margin: 15px 0; border-radius: 6px; color: #2e7d32;\">';
+          echo '<strong>✅ TÜM DOSYALAR TEMİZ</strong><br>';
+          echo 'Hiçbir virüs tespit edilmedi.';
+          echo '</div>';
+      }
+      echo '</div>';
+      ?>
+      EOF
+      
+      nginx -g 'daemon off;'
+      "
+
+volumes:
+  antivirus_quarantine:
+  antivirus_scan:
+  antivirus_logs:

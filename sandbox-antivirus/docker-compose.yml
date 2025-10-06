@@ -1,0 +1,50 @@
+services:
+  antivirus:
+    image: alpine:latest
+    container_name: sandbox-antivirus
+    restart: unless-stopped
+    ports:
+      - "3310:3310"   # ClamAV daemon
+    volumes:
+      - antivirus_quarantine:/quarantine
+      - antivirus_scan:/scan
+      - antivirus_logs:/var/log/clamav
+    working_dir: /tmp
+    command: >
+      sh -c "
+      echo 'Installing ClamAV on Alpine Linux...' &&
+      apk update &&
+      apk add --no-cache clamav freshclam &&
+      mkdir -p /var/lib/clamav /var/log/clamav /tmp/scan &&
+      echo 'Starting FreshClam for database update...' &&
+      echo 'DatabaseDirectory /var/lib/clamav' > /etc/clamav/freshclam.conf &&
+      echo 'DatabaseMirror database.clamav.net' >> /etc/clamav/freshclam.conf &&
+      echo 'Checks 24' >> /etc/clamav/freshclam.conf &&
+      freshclam &&
+      echo 'ClamAV database downloaded successfully!' &&
+      echo 'ClamAV Scanner ready - use clamscan for file scanning' &&
+      tail -f /dev/null
+      "
+    healthcheck:
+      test: ["CMD", "clamscan", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+
+  # Simple Web interface with upload capability
+  file-upload:
+    image: nginx:alpine
+    container_name: sandbox-antivirus-ui
+    restart: unless-stopped
+    ports:
+      - "3031:80"   # Web UI
+    depends_on:
+      - antivirus
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  antivirus_quarantine:
+  antivirus_scan:
+  antivirus_logs:

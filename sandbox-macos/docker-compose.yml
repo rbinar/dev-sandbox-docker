@@ -1,0 +1,32 @@
+services:
+  macos:
+    image: dockurr/macos
+    container_name: sandbox-macos
+    environment:
+      VERSION: "14"          # macOS 14 Sonoma
+      RAM_SIZE: "4G"         # 4GB RAM
+      CPU_CORES: "2"         # 2 CPU cores
+      DISK_SIZE: "64G"       # 64GB disk
+      WIDTH: "1920"          # Screen width
+      HEIGHT: "1080"         # Screen height
+      MODEL: "iMacPro1,1"    # Mac model emulation
+    # macOS'ta KVM ve network devices desteklenmiyor
+    # devices:
+    #   - /dev/kvm             # KVM virtualization support
+    #   - /dev/net/tun         # Network tunneling
+    # cap_add:
+    #   - NET_ADMIN            # Network administration
+    ports:
+      - "3050:8006"          # Web Browser UI
+      - "3051:5900/tcp"      # VNC Access TCP
+      - "3052:5900/udp"      # VNC Access UDP
+    volumes:
+      - macos_data:/storage        # Persistent macOS storage
+      # Shared folder geçici olarak devre dışı (macOS Docker Desktop permission sorunu)
+      # - ./shared:/shared           # Shared folder with host
+    restart: unless-stopped
+    stop_grace_period: 2m    # Graceful shutdown for macOS
+
+volumes:
+  macos_data:
+    driver: local

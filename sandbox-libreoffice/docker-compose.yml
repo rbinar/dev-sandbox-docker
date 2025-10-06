@@ -1,0 +1,18 @@
+services:
+  libreoffice:
+    image: lscr.io/linuxserver/libreoffice:latest
+    container_name: sandbox-libreoffice
+    restart: unless-stopped
+    ports:
+      - "3020:3000"   # Web Access
+      - "3021:3001"   # Web Access (HTTPS)
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Istanbul
+    volumes:
+      - libreoffice_config:/config
+    shm_size: "1g"
+
+volumes:
+  libreoffice_config:

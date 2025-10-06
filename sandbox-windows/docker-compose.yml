@@ -1,0 +1,34 @@
+services:
+  windows:
+    image: dockurr/windows
+    container_name: sandbox-windows
+    environment:
+      VERSION: "11"          # Windows 11 Pro
+      RAM_SIZE: "4G"         # 4GB RAM
+      CPU_CORES: "2"         # 2 CPU cores
+      DISK_SIZE: "64G"       # 64GB disk
+      USERNAME: "Docker"     # Default user
+      PASSWORD: "admin"      # Default password
+      LANGUAGE: "Turkish"    # Türkçe dil desteği
+      KEYBOARD: "tr-TR"      # Türkçe klavye
+      REGION: "tr-TR"        # Türkiye bölgesi
+    # macOS'ta KVM ve network devices desteklenmiyor
+    # devices:
+    #   - /dev/kvm             # KVM virtualization support
+    #   - /dev/net/tun         # Network tunneling
+    # cap_add:
+    #   - NET_ADMIN            # Network administration
+    ports:
+      - "3040:8006"          # Web Browser UI
+      - "3041:3389/tcp"      # RDP Access TCP
+      - "3042:3389/udp"      # RDP Access UDP
+    volumes:
+      - windows_data:/storage      # Persistent Windows storage
+      # Shared folder geçici olarak devre dışı (macOS Docker Desktop permission sorunu)
+      # - ./shared:/shared           # Shared folder with host
+    restart: unless-stopped
+    stop_grace_period: 2m    # Graceful shutdown for Windows
+
+volumes:
+  windows_data:
+    driver: local
