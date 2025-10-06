@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🛡️ ClamAV Scanner - Auto Scan</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #d32f2f; text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .upload-area { border: 3px dashed #4caf50; border-radius: 10px; padding: 40px; text-align: center; margin: 20px 0; background: #f9f9f9; transition: all 0.3s; cursor: pointer; }
+        .upload-area.dragover { border-color: #2196f3; background: #e3f2fd; }
+        .upload-area:hover { border-color: #2196f3; background: #f0f8f0; }
+        .upload-area.uploading { border-color: #ff9800; background: #fff3e0; }
+        .btn { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin: 10px; }
+        .btn:hover { background: #45a049; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .file-item { background: #f0f0f0; padding: 10px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .banner { background: #e8f5e8; border: 2px solid #4caf50; padding: 15px; margin: 20px 0; border-radius: 8px; text-align: center; }
+        .cmd { background: #f5f5f5; padding: 15px; border-radius: 4px; font-family: monospace; margin: 10px 0; border-left: 4px solid #2196f3; font-size: 12px; }
+        .info-box { background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 6px; }
+        .results { margin: 20px 0; padding: 15px; border-radius: 6px; }
+        .results.clean { background: #e8f5e8; border: 1px solid #4caf50; color: #2e7d32; }
+        .results.infected { background: #ffebee; border: 1px solid #f44336; color: #c62828; }
+        .results.scanning { background: #fff3e0; border: 1px solid #ff9800; color: #ef6c00; }
+        .loading { display: none; text-align: center; margin: 20px 0; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .progress { background: #f0f0f0; border-radius: 10px; margin: 10px 0; overflow: hidden; }
+        .progress-bar { background: #2196f3; height: 20px; width: 0%; transition: width 0.3s; color: white; text-align: center; line-height: 20px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ ClamAV Antivirus Scanner</h1>
+        <div class="subtitle">🍎 Apple Silicon Uyumlu • Otomatik Tarama</div>
+        
+        <div class="banner">
+            <strong>🔒 TAM İZOLASYON + OTOMATİK TARAMA</strong><br>
+            Dosyalar yüklenir, container içinde taranır ve sonuç anında gösterilir
+        </div>
+        
+        <div class="info-box">
+            <strong>ℹ️ Nasıl Kullanılır:</strong><br>
+            1. Dosyaları sürükleyip bırakın veya tıklayarak seçin<br>
+            2. Dosyalar otomatik olarak yüklenir ve taranır<br>
+            3. Tarama sonuçları anında görüntülenir<br>
+            <br>
+            <strong>Desteklenen:</strong> Tüm dosya türleri • Max: 100MB/dosya
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <div style="font-size: 24px; margin-bottom: 15px;">📁</div>
+            <div><strong>Dosyaları buraya sürükleyin veya tıklayın</strong></div>
+            <div style="margin: 15px 0; color: #666;">Otomatik tarama başlayacak</div>
+            <input type="file" id="fileInput" multiple style="display: none;">
+            <button class="btn" onclick="document.getElementById('fileInput').click()">📁 Dosya Seç</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Dosyalar taranıyor...</div>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar">0%</div>
+            </div>
+        </div>
+        
+        <div id="results"></div>
+        
+        <h3>💻 Hızlı Test Komutları</h3>
+        <div class="cmd">
+            # ClamAV durumu kontrol<br>
+            docker exec sandbox-antivirus clamscan --version<br><br>
+            
+            # Hızlı EICAR virüs testi<br>
+            echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' | docker exec -i sandbox-antivirus sh -c 'cat > /tmp/scan/test.txt && clamscan /tmp/scan/test.txt'
+        </div>
+        
+        <div style="background: #e8f5e8; border: 1px solid #4caf50; padding: 15px; margin: 20px 0; border-radius: 6px; color: #2e7d32;">
+            <strong>✅ Otomatik Tarama Özellikleri:</strong><br>
+            • Dosyalar anında yüklenir ve taranır<br>
+            • Virüs tespit durumunda kırmızı uyarı<br>
+            • Temiz dosyalar için yeşil onay<br>
+            • Tüm işlemler izole container içinde
+        </div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const progressBar = document.getElementById('progressBar');
+        
+        // Drag & Drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            // Show loading
+            loading.style.display = 'block';
+            uploadArea.classList.add('uploading');
+            results.innerHTML = '';
+            
+            // Update progress
+            let completed = 0;
+            const total = files.length;
+            
+            const formData = new FormData();
+            for (let file of files) {
+                if (file.size > 100 * 1024 * 1024) {
+                    alert('Dosya çok büyük: ' + file.name + ' (Max: 100MB)');
+                    continue;
+                }
+                formData.append('files[]', file);
+            }
+            
+            try {
+                const response = await fetch('scan.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.text();
+                results.innerHTML = result;
+            } catch (error) {
+                results.innerHTML = '<div class="results infected">❌ Tarama hatası: ' + error.message + '</div>';
+            } finally {
+                loading.style.display = 'none';
+                uploadArea.classList.remove('uploading');
+            }
+        }
+        
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+        }
+    </script>
+</body>
+</html>

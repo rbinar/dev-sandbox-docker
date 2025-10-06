@@ -1,0 +1,17 @@
+services:
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    container_name: sandbox-jupyter
+    restart: unless-stopped
+    ports:
+      - "8888:8888"   # Jupyter Web Interface
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=admin123
+    volumes:
+      - jupyter_config:/home/jovyan/work
+    user: root
+    command: "start-notebook.sh --NotebookApp.token='degistir-bunu' --NotebookApp.password='' --NotebookApp.allow_root=True"
+
+volumes:
+  jupyter_config:

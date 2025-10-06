@@ -1,0 +1,21 @@
+services:
+  webtop:
+    image: lscr.io/linuxserver/webtop:latest
+    container_name: sandbox-webtop
+    restart: unless-stopped
+    ports:
+      - "3010:3000"   # VNC Web Access
+      - "3011:3001"   # VNC Web Access (HTTPS)
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Istanbul
+      - SUBFOLDER=/
+      - KEYBOARD=tr-tr-qwerty
+    volumes:
+      - webtop_config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker access (optional)
+    shm_size: "2g"
+
+volumes:
+  webtop_config:
