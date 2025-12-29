@@ -34,7 +34,7 @@ services:
 
   # Simple Web interface with upload capability
   file-upload:
-    image: nginx:alpine
+    image: rbinar/antivirus-ui:custom  # Custom image with all features
     container_name: sandbox-antivirus-ui
     restart: unless-stopped
     ports:
@@ -43,6 +43,46 @@ services:
       - antivirus
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./upload.html:/usr/share/nginx/html/index.html
+      - ./scan.php:/usr/share/nginx/html/scan.php
+    command: >
+      sh -c "
+      echo 'Setting up Antivirus Web UI...' &&
+      apk update &&
+      apk add --no-cache php82-fpm php82-curl php82-json clamav freshclam &&
+      
+      echo 'Configuring nginx for PHP...' &&
+      echo 'server {
+          listen 80;
+          root /usr/share/nginx/html;
+          index index.html;
+          client_max_body_size 0;
+          
+          location ~ \.php$ {
+              fastcgi_pass 127.0.0.1:9000;
+              fastcgi_index index.php;
+              fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+              include fastcgi_params;
+          }
+      }' > /etc/nginx/conf.d/default.conf &&
+      
+      echo 'Configuring PHP for unlimited uploads...' &&
+      sed -i 's/upload_max_filesize = .*/upload_max_filesize = 0/' /etc/php82/php.ini &&
+      sed -i 's/post_max_size = .*/post_max_size = 0/' /etc/php82/php.ini &&
+      sed -i 's/max_execution_time = .*/max_execution_time = 0/' /etc/php82/php.ini &&
+      
+      echo 'Updating ClamAV database...' &&
+      mkdir -p /var/lib/clamav /tmp/uploads &&
+      chmod 777 /tmp/uploads &&
+      echo 'DatabaseDirectory /var/lib/clamav' > /etc/clamav/freshclam.conf &&
+      echo 'DatabaseMirror database.clamav.net' >> /etc/clamav/freshclam.conf &&
+      echo 'Checks 24' >> /etc/clamav/freshclam.conf &&
+      freshclam &&
+      
+      echo 'Starting services...' &&
+      php-fpm82 &&
+      nginx -g 'daemon off;'
+      "
 
 volumes:
   antivirus_quarantine:

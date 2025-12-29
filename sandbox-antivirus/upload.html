@@ -56,7 +56,7 @@
             • <strong>URL Tara:</strong> İnternetten dosya indirip tarayın<br>
             • Tarama sonuçları gerçek zamanlı görüntülenir<br>
             <br>
-            <strong>Desteklenen:</strong> Tüm dosya türleri • Max: 100MB/dosya
+            <strong>Desteklenen:</strong> Tüm dosya türleri • <span style="color: #4caf50;">Sınırsız boyut</span>
         </div>
         
         <div class="tabs">
@@ -253,10 +253,7 @@
             let validFiles = 0;
             
             for (let file of files) {
-                if (file.size > 100 * 1024 * 1024) {
-                    alert('Dosya çok büyük: ' + file.name + ' (Max: 100MB)');
-                    continue;
-                }
+                // No file size limit - allowing unlimited file sizes
                 formData.append('files[]', file);
                 validFiles++;
             }

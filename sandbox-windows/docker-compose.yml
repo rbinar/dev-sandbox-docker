@@ -9,9 +9,10 @@ services:
       DISK_SIZE: "64G"       # 64GB disk
       USERNAME: "Docker"     # Default user
       PASSWORD: "admin"      # Default password
-      LANGUAGE: "Turkish"    # Türkçe dil desteği
-      KEYBOARD: "tr-TR"      # Türkçe klavye
-      REGION: "tr-TR"        # Türkiye bölgesi
+      LANGUAGE: "English"    # English (Türkçe desteklenmiyor)
+      KEYBOARD: "en-US"      # English keyboard
+      REGION: "en-US"        # US region
+      KVM: "N"               # Disable KVM for macOS compatibility
     # macOS'ta KVM ve network devices desteklenmiyor
     # devices:
     #   - /dev/kvm             # KVM virtualization support

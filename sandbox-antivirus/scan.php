@@ -49,7 +49,7 @@ if (isset($_POST['scan_url'])) {
     echo '</div></div>';
     
     // Get ClamAV info
-    exec('docker exec sandbox-antivirus clamscan --version 2>&1', $versionOutput);
+    exec('clamscan --version 2>&1', $versionOutput);
     if (!empty($versionOutput)) {
         echo '<div style="background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 6px; font-family: monospace; font-size: 12px;">';
         echo '<strong>🛡️ ClamAV Engine:</strong><br>';
@@ -84,15 +84,12 @@ for ($i = 0; $i < $totalFiles; $i++) {
     $uploadPath = $uploadDir . uniqid() . '_' . $fileName;
     
     if (move_uploaded_file($_FILES['files']['tmp_name'][$i], $uploadPath)) {
-        // Copy file to antivirus container and scan
-        $containerPath = '/tmp/scan/' . basename($uploadPath);
-        $copyCmd = 'docker cp ' . escapeshellarg($uploadPath) . ' sandbox-antivirus:' . escapeshellarg($containerPath) . ' 2>&1';
-        $scanCmd = 'docker exec sandbox-antivirus clamscan ' . escapeshellarg($containerPath) . ' 2>&1';
+        // Scan with local ClamAV
+        $scanCmd = 'clamscan ' . escapeshellarg($uploadPath) . ' 2>&1';
         
-        exec($copyCmd, $copyOutput, $copyReturn);
+        exec($scanCmd, $scanOutput, $scanReturn);
         
-        if ($copyReturn === 0) {
-            exec($scanCmd, $scanOutput, $scanReturn);
+        if ($scanReturn !== 2) { // 2 means scan failed, 0 = clean, 1 = infected
             $scanResult = implode("\n", $scanOutput);
             
             if (strpos($scanResult, 'FOUND') !== false) {
@@ -122,14 +119,13 @@ for ($i = 0; $i < $totalFiles; $i++) {
             }
         } else {
             echo '<div style="color: #f44336; margin: 8px 0; padding: 10px; background: #ffebee; border-radius: 4px;">';
-            echo '❌ <strong>' . htmlspecialchars($fileName) . '</strong> - Container kopyalama hatası';
+            echo '❌ <strong>' . htmlspecialchars($fileName) . '</strong> - Tarama hatası';
             echo '</div>';
             $errorCount++;
         }
         
         // Clean up
         unlink($uploadPath);
-        exec('docker exec sandbox-antivirus rm -f ' . escapeshellarg($containerPath) . ' 2>/dev/null');
     } else {
         echo '<div style="color: #f44336; margin: 8px 0; padding: 10px; background: #ffebee; border-radius: 4px;">';
         echo '❌ <strong>' . htmlspecialchars($fileName) . '</strong> - Dosya yükleme hatası';
@@ -168,7 +164,7 @@ if ($infectedCount > 0) {
 echo '</div>';
 
 // Get ClamAV info
-exec('docker exec sandbox-antivirus clamscan --version 2>&1', $versionOutput);
+exec('clamscan --version 2>&1', $versionOutput);
 if (!empty($versionOutput)) {
     echo '<div style="background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 6px; font-family: monospace; font-size: 12px;">';
     echo '<strong>🛡️ ClamAV Engine:</strong><br>';
@@ -264,23 +260,11 @@ function downloadFileFromUrl($url, $uploadDir) {
 
 // Function to scan a single file
 function scanSingleFile($filePath, $fileName) {
-    $containerPath = '/tmp/scan/' . basename($filePath);
-    $copyCmd = 'docker cp ' . escapeshellarg($filePath) . ' sandbox-antivirus:' . escapeshellarg($containerPath) . ' 2>&1';
-    $scanCmd = 'docker exec sandbox-antivirus clamscan ' . escapeshellarg($containerPath) . ' 2>&1';
-    
-    exec($copyCmd, $copyOutput, $copyReturn);
-    
-    if ($copyReturn !== 0) {
-        return '<div style="color: #f44336; margin: 8px 0; padding: 10px; background: #ffebee; border-radius: 4px;">
-                ❌ <strong>' . htmlspecialchars($fileName) . '</strong> - Container kopyalama hatası
-                </div>';
-    }
+    // Direct scan with local ClamAV
+    $scanCmd = 'clamscan ' . escapeshellarg($filePath) . ' 2>&1';
     
     exec($scanCmd, $scanOutput, $scanReturn);
     $scanResult = implode("\n", $scanOutput);
-    
-    // Clean up container file
-    exec('docker exec sandbox-antivirus rm -f ' . escapeshellarg($containerPath) . ' 2>/dev/null');
     
     if (strpos($scanResult, 'FOUND') !== false) {
         $output = '<div style="color: #f44336; margin: 8px 0; padding: 10px; background: #ffebee; border-radius: 4px;">';

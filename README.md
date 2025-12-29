@@ -66,6 +66,18 @@ Bu repository, **güvenlik odaklı** Docker sandbox ortamları koleksiyonudur. A
   - REST API ile otomatik entegrasyon
   - **Erişim**: http://localhost:3031 (Web UI)
 
+- **[sandbox-windows](./sandbox-windows/)** - İzole Windows 11 Pro Ortamı
+  - Güvenilmeyen Windows yazılımlarını ana sistem riske atmadan test etme
+  - Windows malware analizi ve güvenlik araştırması
+  - Legacy Windows uygulamalarını güvenli ortamda çalıştırma
+  - **Erişim**: http://localhost:3040 (Web UI), RDP: localhost:3041
+
+- **[sandbox-macos](./sandbox-macos/)** - İzole macOS Sonoma Ortamı
+  - macOS/iOS geliştirme için güvenli test ortamı
+  - Şüpheli macOS uygulamalarını ana sistem etkilemeden test etme
+  - Cross-platform geliştirme ve uyumluluk testleri
+  - **Erişim**: http://localhost:3050 (Web UI), VNC: localhost:3051
+
 ### 🚀 Otomatik Kurulum
 
 **Kolay kurulum için setup scriptlerini kullanın:**
@@ -86,13 +98,15 @@ chmod +x setup.sh
 Setup script şunları yapar:
 1. ✅ Docker Desktop kurulumunu kontrol eder
 2. 📦 Kurulu değilse otomatik kurulum yapar
-3. 🎯 Size 6 farklı sandbox seçeneği sunar:
+3. 🎯 Size 8 farklı sandbox seçeneği sunar:
    - 🌐 Chromium Browser (Güvenli web browsing)
    - 💻 VS Code Server (İzole kod editörü)
    - 🖥️ Webtop + ClamAV (Linux desktop + antivirus)
    - 📄 LibreOffice (Güvenli Office dosyaları)
    - 📊 Jupyter Notebook (Data science)
    - 🦠 Antivirus Scanner (Özel virüs tarama)
+   - 🪟 Windows Sandbox (İzole Windows 11)
+   - 🍎 macOS Sandbox (İzole macOS Sonoma)
 4. 🚀 Seçtiğiniz sandbox'ı başlatır
 5. 🗑️ İstendiğinde temizlik yapar
 
@@ -118,6 +132,12 @@ cd sandbox-jupyter && docker-compose up -d
 
 # Antivirus Scanner (ClamAV + Web UI)
 cd sandbox-antivirus && docker-compose up -d
+
+# Windows Sandbox (İzole Windows 11 Pro)
+cd sandbox-windows && docker-compose up -d
+
+# macOS Sandbox (İzole macOS Sonoma)
+cd sandbox-macos && docker-compose up -d
 ```
 
 ### ⚠️ Güvenlik Uyarıları
