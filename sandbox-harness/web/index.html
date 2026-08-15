@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Harness Sandbox</title>
+<style>
+  :root {
+    --bg: #0f1116;
+    --panel: #171a21;
+    --line: #262b36;
+    --fg: #e6e9ef;
+    --muted: #8b93a7;
+    --accent: #5b9dff;
+    --ok: #3fbf7f;
+    --off: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 16px; background: var(--panel);
+    border-bottom: 1px solid var(--line); flex: none;
+  }
+  .brand { font-weight: 650; letter-spacing: .2px; white-space: nowrap; }
+  .brand span { color: var(--muted); font-weight: 400; margin-left: 8px; }
+  nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  button.tab {
+    background: transparent; color: var(--fg);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 13px; cursor: pointer; font: inherit;
+    display: flex; align-items: center; gap: 8px;
+  }
+  button.tab:hover { border-color: #39415260; background: #1d212a; }
+  button.tab[aria-selected="true"] {
+    border-color: var(--accent); background: #16233a; color: #fff;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--off); flex: none; }
+  .dot.on { background: var(--ok); }
+  .spacer { flex: 1; }
+  .hint { color: var(--muted); font-size: 12.5px; }
+  .hint a { color: var(--accent); }
+  main { flex: 1; position: relative; background: #111318; }
+  iframe { width: 100%; height: 100%; border: 0; display: block; background: #111318; }
+  .empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    text-align: center; padding: 24px; color: var(--muted);
+  }
+  .empty h2 { color: var(--fg); font-size: 17px; margin: 0 0 8px; }
+  code {
+    background: #1d212a; border: 1px solid var(--line); border-radius: 5px;
+    padding: 1px 6px; font-size: 12.5px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">AI Harness Sandbox<span>izole container</span></div>
+  <nav id="tabs" role="tablist"></nav>
+  <div class="spacer"></div>
+  <div class="hint" id="hint">yükleniyor…</div>
+</header>
+
+<main>
+  <div class="empty" id="empty">
+    <div>
+      <h2>Bir harness seç</h2>
+      <div>Yukarıdaki sekmelerden birine tıkla — terminal burada açılır.</div>
+      <div style="margin-top:10px">Yeşil nokta = imajda kurulu.</div>
+    </div>
+  </div>
+  <iframe id="term" title="harness terminal" style="display:none"
+          allow="clipboard-read; clipboard-write"></iframe>
+</main>
+
+<script>
+  const tabsEl = document.getElementById('tabs')
+  const frame  = document.getElementById('term')
+  const empty  = document.getElementById('empty')
+  const hint   = document.getElementById('hint')
+
+  // Terminaller ayrı portlarda; sayfayı hangi host'tan açtıysan onu koru
+  // (localhost / 127.0.0.1 / uzak host farkı burada önemli).
+  const host = location.hostname
+
+  function show(h) {
+    frame.src = `http://${host}:${h.port}/`
+    frame.style.display = 'block'
+    empty.style.display = 'none'
+    for (const b of tabsEl.querySelectorAll('button')) {
+      b.setAttribute('aria-selected', String(b.dataset.id === h.id))
+    }
+    hint.innerHTML = h.installed
+      ? `terminal: <a href="http://${host}:${h.port}/" target="_blank" rel="noopener">:${h.port}</a> — açılmazsa bu bağlantı`
+      : `<code>${h.cmd}</code> imajda kurulu değil — terminalde kurulum komutu yazıyor`
+    location.hash = h.id
+  }
+
+  fetch('/api/status')
+    .then(r => r.json())
+    .then(({ harnesses }) => {
+      for (const h of harnesses) {
+        const b = document.createElement('button')
+        b.className = 'tab'
+        b.type = 'button'
+        b.role = 'tab'
+        b.dataset.id = h.id
+        b.setAttribute('aria-selected', 'false')
+        b.innerHTML = `<span class="dot${h.installed ? ' on' : ''}"></span>${h.label}`
+        b.addEventListener('click', () => show(h))
+        tabsEl.appendChild(b)
+      }
+      hint.textContent = `${harnesses.filter(h => h.installed).length}/${harnesses.length} harness kurulu`
+      const wanted = harnesses.find(h => h.id === location.hash.slice(1))
+      if (wanted) show(wanted)
+    })
+    .catch(err => { hint.textContent = 'durum alınamadı: ' + err.message })
+</script>
+</body>
+</html>

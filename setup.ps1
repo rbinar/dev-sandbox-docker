@@ -73,11 +73,12 @@ function Select-Sandbox {
     Write-Host "6) Antivirus Scanner Kur (Virüs tarama)" -ForegroundColor White
     Write-Host "7) Windows Sandbox Kur (İzole Windows)" -ForegroundColor White
     Write-Host "8) macOS Sandbox Kur (İzole macOS)" -ForegroundColor White
-    Write-Host "9) Tüm Sandbox'ları Kur" -ForegroundColor White
-    Write-Host "10) Sandbox'ları Kaldır/Temizle" -ForegroundColor White
-    Write-Host "11) Çıkış" -ForegroundColor White
-    
-    $choice = Read-Host "Seçiminizi yapın [1-11]"
+    Write-Host "9) AI Harness Sandbox Kur (Claude Code, Codex, Antigravity, OpenCode, Copilot)" -ForegroundColor White
+    Write-Host "10) Tüm Sandbox'ları Kur" -ForegroundColor White
+    Write-Host "11) Sandbox'ları Kaldır/Temizle" -ForegroundColor White
+    Write-Host "12) Çıkış" -ForegroundColor White
+
+    $choice = Read-Host "Seçiminizi yapın [1-12]"
     
     switch ($choice) {
         "1" {
@@ -124,6 +125,11 @@ function Select-Sandbox {
             Write-Host "✓ macOS hazır! Web UI: http://localhost:3050, VNC: localhost:3051" -ForegroundColor Green
         }
         "9" {
+            Write-Host "🤖 AI Harness Sandbox kuruluyor..." -ForegroundColor Green
+            Setup-Harness
+            Write-Host "✓ Harness hazır! Web UI: http://localhost:3060" -ForegroundColor Green
+        }
+        "10" {
             Write-Host "🚀 Tüm sandbox'lar kuruluyor..." -ForegroundColor Green
             Push-Location "sandbox-chromium"
             docker-compose up -d
@@ -137,6 +143,7 @@ function Select-Sandbox {
             Setup-Antivirus
             Setup-Windows
             Setup-MacOS
+            Setup-Harness
             Write-Host "✓ Chromium: https://localhost:3001" -ForegroundColor Green
             Write-Host "✓ Code Server: http://localhost:8443" -ForegroundColor Green
             Write-Host "✓ Webtop + ClamAV: http://localhost:3010" -ForegroundColor Green
@@ -145,11 +152,12 @@ function Select-Sandbox {
             Write-Host "✓ Antivirus: http://localhost:3031" -ForegroundColor Green
             Write-Host "✓ Windows: http://localhost:3040 (RDP: 3041)" -ForegroundColor Green
             Write-Host "✓ macOS: http://localhost:3050 (VNC: 3051)" -ForegroundColor Green
-        }
-        "10" {
-            Show-CleanupMenu
+            Write-Host "✓ AI Harness: http://localhost:3060" -ForegroundColor Green
         }
         "11" {
+            Show-CleanupMenu
+        }
+        "12" {
             Write-Host "👋 Çıkılıyor..." -ForegroundColor Yellow
             exit 0
         }
@@ -303,6 +311,28 @@ function Setup-MacOS {
     Pop-Location
 }
 
+# AI Harness kurulum fonksiyonu
+function Setup-Harness {
+    Write-Host "🤖 AI Harness Sandbox kuruluyor..." -ForegroundColor Yellow
+
+    Push-Location "sandbox-harness"
+    Write-Host "💡 Tek container, 5 AI coding harness'ı" -ForegroundColor Blue
+    Write-Host "  • Claude Code, Codex, Antigravity, OpenCode, GitHub Copilot" -ForegroundColor White
+    Write-Host "  • Web picker: 3060, terminaller: 3061-3065" -ForegroundColor White
+    Write-Host "  • Portlar yalnızca 127.0.0.1'e bağlı" -ForegroundColor White
+
+    # İlk çalıştırmada imaj derlenir (harness'lar npm'den kurulur) — birkaç dakika.
+    Write-Host "⏳ İmaj derleniyor (ilk sefer 3-6 dakika)..." -ForegroundColor Yellow
+    docker-compose up -d --build
+
+    Write-Host "✅ AI Harness Sandbox başlatıldı!" -ForegroundColor Green
+    Write-Host "💡 Web UI: http://localhost:3060" -ForegroundColor Blue
+    Write-Host "📋 Her harness'a container içinde bir kez login ol —" -ForegroundColor Yellow
+    Write-Host "   oturumlar volume'de kalıcı, host kimlikleri mount EDİLMEZ." -ForegroundColor Yellow
+
+    Pop-Location
+}
+
 # Temizlik menüsü
 function Show-CleanupMenu {
     Write-Host "🗑️  Sandbox Temizlik Menüsü" -ForegroundColor Red
@@ -384,7 +414,14 @@ function Stop-Containers {
         Pop-Location
         Write-Host "✓ macOS container'ı durduruldu" -ForegroundColor Green
     }
-    
+
+    if (Test-Path "sandbox-harness") {
+        Push-Location "sandbox-harness"
+        docker-compose stop
+        Pop-Location
+        Write-Host "✓ AI Harness container'ı durduruldu" -ForegroundColor Green
+    }
+
     Write-Host "🎉 Tüm container'lar durduruldu!" -ForegroundColor Green
     Read-Host "Ana menüye dönmek için Enter'a basın"
     Select-Sandbox
@@ -449,7 +486,14 @@ function Stop-AndRemoveContainers {
         Pop-Location
         Write-Host "✓ macOS container'ı ve verileri silindi" -ForegroundColor Green
     }
-    
+
+    if (Test-Path "sandbox-harness") {
+        Push-Location "sandbox-harness"
+        docker-compose down -v
+        Pop-Location
+        Write-Host "✓ AI Harness container'ı ve verileri silindi (login'ler dahil)" -ForegroundColor Green
+    }
+
     Write-Host "🎉 Tüm container'lar ve veriler silindi! (Temiz sandbox)" -ForegroundColor Green
     Read-Host "Ana menüye dönmek için Enter'a basın"
     Select-Sandbox
@@ -517,7 +561,13 @@ function Start-FullCleanup {
             docker-compose down -v
             Pop-Location
         }
-        
+
+        if (Test-Path "sandbox-harness") {
+            Push-Location "sandbox-harness"
+            docker-compose down -v
+            Pop-Location
+        }
+
         # Image'ları sil
         Write-Host "📦 Image'lar siliniyor..." -ForegroundColor Yellow
         try { docker rmi lscr.io/linuxserver/chromium:5f5dd27e-ls102 } catch { }

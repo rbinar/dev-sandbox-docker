@@ -1,0 +1,39 @@
+services:
+  sandbox-harness:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sandbox-harness:latest
+    container_name: sandbox-harness
+    restart: unless-stopped
+
+    # Portlar yalnizca 127.0.0.1'e baglanir. ttyd kimlik dogrulamasiz calisir ve
+    # icinde kabuk verir; 0.0.0.0'a acmak container'i agdaki herkese acmak olur.
+    ports:
+      - "127.0.0.1:3060:3060"   # picker (web arayuzu)
+      - "127.0.0.1:3061:3061"   # Claude Code
+      - "127.0.0.1:3062:3062"   # Codex
+      - "127.0.0.1:3063:3063"   # Antigravity (agy)
+      - "127.0.0.1:3064:3064"   # OpenCode
+      - "127.0.0.1:3065:3065"   # GitHub Copilot
+
+    volumes:
+      # Login bilgileri ve harness ayarlari burada kalici. Host'un ~/.claude'i
+      # MOUNT EDILMEZ — her harness'a container icinde login olunur.
+      - harness-home:/home/dev
+      # Uzerinde calisilan dosyalar. Ayri volume: home'u silmeden workspace
+      # sifirlanabilsin (ya da tersi).
+      - harness-work:/home/dev/work
+
+    # Kapsayici icindeki surecler root olmayan 'dev' kullanicisi olarak kosar
+    # (Dockerfile'da USER dev). Ek olarak yetki yukseltmeyi kapatiyoruz.
+    security_opt:
+      - no-new-privileges:true
+
+    # Harness'lar ozyinelemeli derleme/test kosabilir; makul bir tavan.
+    mem_limit: 4g
+    cpus: 2.0
+
+volumes:
+  harness-home:
+  harness-work:

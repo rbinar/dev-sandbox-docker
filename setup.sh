@@ -62,11 +62,12 @@ select_sandbox() {
     echo "6) Antivirus Scanner Kur (Virüs tarama)"
     echo "7) Windows Sandbox Kur (İzole Windows)"
     echo "8) macOS Sandbox Kur (İzole macOS)"
-    echo "9) Tüm Sandbox'ları Kur"
-    echo "10) Sandbox'ları Kaldır/Temizle"
-    echo "11) Çıkış"
-    
-    read -p "Seçiminizi yapın [1-11]: " choice
+    echo "9) AI Harness Sandbox Kur (Claude Code, Codex, Antigravity, OpenCode, Copilot)"
+    echo "10) Tüm Sandbox'ları Kur"
+    echo "11) Sandbox'ları Kaldır/Temizle"
+    echo "12) Çıkış"
+
+    read -p "Seçiminizi yapın [1-12]: " choice
     
     case $choice in
         1)
@@ -112,6 +113,11 @@ select_sandbox() {
             echo -e "${GREEN}✓ macOS hazır! Web UI: http://localhost:3050, VNC: localhost:3051${NC}"
             ;;
         9)
+            echo -e "${GREEN}🤖 AI Harness Sandbox kuruluyor...${NC}"
+            setup_harness
+            echo -e "${GREEN}✓ Harness hazır! Web UI: http://localhost:3060${NC}"
+            ;;
+        10)
             echo -e "${GREEN}🚀 Tüm sandbox'lar kuruluyor...${NC}"
             cd sandbox-chromium && docker-compose up -d && cd ..
             setup_code_server
@@ -121,6 +127,7 @@ select_sandbox() {
             setup_antivirus
             setup_windows
             setup_macos
+            setup_harness
             echo -e "${GREEN}✓ Chromium: https://localhost:3001${NC}"
             echo -e "${GREEN}✓ Code Server: http://localhost:8443${NC}"
             echo -e "${GREEN}✓ Webtop + ClamAV: http://localhost:3010${NC}"
@@ -129,11 +136,12 @@ select_sandbox() {
             echo -e "${GREEN}✓ Antivirus: http://localhost:3031${NC}"
             echo -e "${GREEN}✓ Windows: http://localhost:3040 (RDP: 3041)${NC}"
             echo -e "${GREEN}✓ macOS: http://localhost:3050 (VNC: 3051)${NC}"
-            ;;
-        10)
-            cleanup_menu
+            echo -e "${GREEN}✓ AI Harness: http://localhost:3060${NC}"
             ;;
         11)
+            cleanup_menu
+            ;;
+        12)
             echo -e "${YELLOW}👋 Çıkılıyor...${NC}"
             exit 0
             ;;
@@ -324,6 +332,27 @@ setup_macos() {
     cd ..
 }
 
+setup_harness() {
+    echo -e "${YELLOW}🤖 AI Harness Sandbox kuruluyor...${NC}"
+
+    cd sandbox-harness
+    echo -e "${BLUE}💡 Tek container, 5 AI coding harness'ı${NC}"
+    echo -e "${WHITE}  • Claude Code, Codex, Antigravity, OpenCode, GitHub Copilot${NC}"
+    echo -e "${WHITE}  • Web picker: 3060, terminaller: 3061-3065${NC}"
+    echo -e "${WHITE}  • Portlar yalnızca 127.0.0.1'e bağlı${NC}"
+
+    # İlk çalıştırmada imaj derlenir (harness'lar npm'den kurulur) — birkaç dakika.
+    echo -e "${YELLOW}⏳ İmaj derleniyor (ilk sefer 3-6 dakika)...${NC}"
+    docker-compose up -d --build
+
+    echo -e "${GREEN}✅ AI Harness Sandbox başlatıldı!${NC}"
+    echo -e "${BLUE}💡 Web UI: http://localhost:3060${NC}"
+    echo -e "${YELLOW}📋 Her harness'a container içinde bir kez login ol —${NC}"
+    echo -e "${YELLOW}   oturumlar volume'de kalıcı, host kimlikleri mount EDİLMEZ.${NC}"
+
+    cd ..
+}
+
 # Temizlik menüsü
 cleanup_menu() {
     echo -e "${RED}🗑️  Sandbox Temizlik Menüsü${NC}"
@@ -397,6 +426,11 @@ stop_containers() {
         cd sandbox-macos && docker-compose stop && cd ..
         echo -e "${GREEN}✓ macOS container'ı durduruldu${NC}"
     fi
+
+    if [ -d "sandbox-harness" ]; then
+        cd sandbox-harness && docker-compose stop && cd ..
+        echo -e "${GREEN}✓ AI Harness container'ı durduruldu${NC}"
+    fi
     
     echo -e "${GREEN}🎉 Tüm container'lar durduruldu!${NC}"
     read -p "Ana menüye dönmek için Enter'a basın..."
@@ -445,6 +479,11 @@ stop_and_remove_containers() {
     if [ -d "sandbox-macos" ]; then
         cd sandbox-macos && docker-compose down -v && cd ..
         echo -e "${GREEN}✓ macOS container'ı ve verileri silindi${NC}"
+    fi
+
+    if [ -d "sandbox-harness" ]; then
+        cd sandbox-harness && docker-compose down -v && cd ..
+        echo -e "${GREEN}✓ AI Harness container'ı ve verileri silindi (login'ler dahil)${NC}"
     fi
     
     echo -e "${GREEN}🎉 Tüm container'lar ve veriler silindi! (Temiz sandbox)${NC}"
@@ -496,6 +535,10 @@ full_cleanup() {
         
         if [ -d "sandbox-macos" ]; then
             cd sandbox-macos && docker-compose down -v && cd ..
+        fi
+
+        if [ -d "sandbox-harness" ]; then
+            cd sandbox-harness && docker-compose down -v && cd ..
         fi
         
         # Image'ları sil
