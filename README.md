@@ -78,6 +78,14 @@ Bu repository, **güvenlik odaklı** Docker sandbox ortamları koleksiyonudur. A
   - Cross-platform geliştirme ve uyumluluk testleri
   - **Erişim**: http://localhost:3050 (Web UI), VNC: localhost:3051
 
+- **[sandbox-harness](./sandbox-harness/)** - AI Coding Harness Sandbox
+  - Tek container'da 5 AI coding harness'ı: Claude Code, Codex, Antigravity (agy),
+    OpenCode, GitHub Copilot
+  - Her harness'a tarayıcıdan erişilebilen ayrı bir web terminali
+  - Host'un `~/.claude`, `~/.codex` gibi dizinleri mount edilmez — login container
+    içinde, izole volume'de kalır
+  - **Erişim**: http://localhost:3060 (picker)
+
 ### 🚀 Otomatik Kurulum
 
 **Kolay kurulum için setup scriptlerini kullanın:**
@@ -138,6 +146,9 @@ cd sandbox-windows && docker-compose up -d
 
 # macOS Sandbox (İzole macOS Sonoma)
 cd sandbox-macos && docker-compose up -d
+
+# AI Harness (Claude Code, Codex, Antigravity, OpenCode, Copilot)
+cd sandbox-harness && docker-compose up -d --build
 ```
 
 ### ⚠️ Güvenlik Uyarıları
@@ -146,6 +157,11 @@ cd sandbox-macos && docker-compose up -d
 - Container'lar ana sistem dosyalarına erişemez
 - Network trafiği kontrollü ve izlenebilir
 - Şüphe durumunda tam temizlik yapabilirsiniz
+- **sandbox-harness**: ttyd kimlik doğrulaması olmadan kabuk verir, bu yüzden portlar
+  yalnızca `127.0.0.1`'e bağlıdır — `docker-compose.yml`'deki port satırlarını
+  `0.0.0.0`'a açmak container'ı ağdaki herkese açık hale getirir
+- **sandbox-harness**: harness'lara verilen hesaplar (login bilgileri) container
+  içinde yaşar — `docker-compose down -v` bunları da siler
 
 ### 🗑️ Temizlik Seçenekleri
 
