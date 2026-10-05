@@ -49,12 +49,25 @@ Her harness'ın terminalinde şu login ipucu gösterilir:
 |---|---|
 | Claude Code | `/login` (tarayıcıda açılan sayfadaki kodu buraya yapıştır) |
 | Codex | `codex login` ya da `CODEX_API_KEY` ortam değişkeni |
-| Antigravity (agy) | `agy auth login` (Google hesabı) |
+| Antigravity (agy) | `agy` ilk açılışta Google girişine yönlendirir (ayrı bir `auth` komutu yok) |
 | OpenCode | OpenRouter API anahtarı ister: `opencode auth login` |
-| GitHub Copilot | GitHub hesabı ister: `/login` ya da `gh auth login` |
+| GitHub Copilot | Kabukta `copilot login --device-code` ya da `gh auth login` |
+
+**Copilot notu:** container'da sistem credential store'u (keyring) yok. Copilot'un uygulama içi
+`/login` komutu bu durumda token'ı yalnızca bellekte tutar; sekme kapanınca giriş kaybolur ve
+headless çağrılar (`copilot -p`) token bulamaz. Kabukta `copilot login --device-code` çalıştır:
+bu komut token'ı `~/.copilot/config.json` dosyasına yazar, volume'de kalıcıdır.
 
 Bir harness çıkarsa (login yarıda kalsa da) terminal kapanmaz, kabuğa düşer; tekrar
 başlatmak için harness komutunu elle çalıştırman yeterli.
+
+## Bilinen Kısıtlar
+
+- **Codex'in kendi sandbox'ı container'da başlamaz.** Codex komutları bubblewrap ile çalıştırır;
+  container içinde namespace oluşturulamadığı için (`bwrap: No permissions to create a new
+  namespace`) her komut hata verir. İzolasyon sınırı zaten container olduğundan Codex'i
+  `--sandbox danger-full-access` ile çalıştır. cli-dispatch kullanıyorsan
+  `~/.config/cli-dispatch/config` içine `CX_SANDBOX="danger-full-access"` yaz.
 
 ## Volume'ler
 

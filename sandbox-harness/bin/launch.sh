@@ -17,9 +17,9 @@ declare -A INSTALL_HINT=(
 declare -A LOGIN_HINT=(
   [claude]="Acilinca:  /login   (tarayicida acilan sayfadaki kodu buraya yapistir)"
   [codex]="Acilinca:  codex login   ya da  CODEX_API_KEY ortam degiskeni"
-  [agy]="Acilinca:  agy auth login   (Google hesabi)"
+  [agy]="Acilinca agy Google girisine yonlendirir (ayri bir auth komutu yok)"
   [opencode]="OpenRouter API anahtari ister: opencode auth login"
-  [copilot]="GitHub hesabi ister: /login  ya da  gh auth login"
+  [copilot]="Kabukta:  copilot login --device-code   (uygulama ici /login token'i burada saklamiyor)"
 )
 
 cd "$HOME/work" 2>/dev/null || cd "$HOME"
